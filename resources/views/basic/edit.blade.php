@@ -43,6 +43,38 @@
                     <span class="text-danger">{{ $message }}</span>
                   @enderror
                 </div>
+                <div class="form-group">
+    <label for="role">Role</label>
+
+    <select name="role"
+            id="role"
+            class="form-control @error('role') is-invalid @enderror">
+
+        <option value="">-- Pilih Role --</option>
+
+        <option value="Admin"
+            {{ old('role', $user->role) == 'Admin' ? 'selected' : '' }}>
+            Admin
+        </option>
+
+        <option value="User"
+            {{ old('role', $user->role) == 'User' ? 'selected' : '' }}>
+            User
+        </option>
+
+        <option value="Dosen"
+            {{ old('role', $user->role) == 'Dosen' ? 'selected' : '' }}>
+            Dosen
+        </option>
+
+    </select>
+
+    @error('role')
+        <span class="text-danger">
+            {{ $message }}
+        </span>
+    @enderror
+</div>
 
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a href="{{ route('basic.index') }}" class="btn btn-default">Back to list</a>

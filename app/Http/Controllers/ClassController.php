@@ -5,12 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\ClassModel;
 use App\User;
+use Illuminate\Support\Facades\Auth;
 
 class ClassController extends Controller
 {
     public function index()
 {
-    $classes = ClassModel::with('dosen')->get();
+    if (Auth::user()->role == 'Dosen') {
+
+        $classes = ClassModel::with('dosen')
+            ->where('dosen_id', Auth::id())
+            ->get();
+    
+    } else {
+    
+        $classes = ClassModel::with('dosen')->get();
+    }
 
     return view('classes.index', compact('classes'));
 }
@@ -32,7 +42,7 @@ class ClassController extends Controller
     public function edit($id)
     {
         $class = ClassModel::findOrFail($id);
-        $dosens = User::all();
+        $dosens = User::where('role', 'Dosen')->get();
     
         return view('classes.edit', compact('class','dosens'));
     }

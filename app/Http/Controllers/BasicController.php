@@ -44,11 +44,13 @@ class BasicController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function store(AddUserRequest $request)
-    {
+    { 
+        // var_dump($request->role);die;
         User::create([
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => $request->email,
+            'role' => $request->role,
             'password' => Hash::make($request->password)
         ]);
 
@@ -95,6 +97,8 @@ class BasicController extends Controller
         $basic->name = $request->name;
         $basic->last_name = $request->last_name;
         $basic->email = $request->email;
+        $basic->role = $request->role;
+        // var_dump($basic->role);die;
         $basic->save();
 
         return redirect()->route('basic.index')->with('message', 'User updated successfully!');
