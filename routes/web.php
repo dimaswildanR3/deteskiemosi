@@ -6,7 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\MonitoringController;
-
+use App\Http\Controllers\DetectionController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -19,7 +19,16 @@ use App\Http\Controllers\MonitoringController;
 Route::get('/', function () {
     return view('auth.login'); // atau redirect
 });
+
+
+Route::post('/start-detection', [DetectionController::class, 'start'])
+    ->name('start.detection');
+
+ Route::get('/clear-data', 'SessionController@clearMyData')
+    ->middleware('auth')
+    ->name('clear.data');
 // =====================
+
 // AUTH REQUIRED
 // =====================
 Route::middleware('auth')->group(function () {

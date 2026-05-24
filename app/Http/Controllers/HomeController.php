@@ -47,85 +47,87 @@ class HomeController extends Controller
             $classes = ClassModel::where(
                 'dosen_id',
                 Auth::id()
-            )->count();
-
+            )->get();
+    
             $monitoring = Yolo::whereHas(
                 'class',
                 function ($q) {
-
+    
                     $q->where(
                         'dosen_id',
                         Auth::id()
                     );
-
+    
                 }
             )->count();
-
+    
             $widget = [
-
+    
                 'users' => 0,
-
-                'classes' => $classes,
-
+    
+                'classes' => $classes->count(),
+    
                 'monitoring' => $monitoring,
-
+    
                 'monitoring_today' => Yolo::whereDate(
                     'created_at',
                     now()->toDateString()
                 )
                 ->whereHas('class', function ($q) {
-
+    
                     $q->where(
                         'dosen_id',
                         Auth::id()
                     );
-
+    
                 })->count()
-
+    
             ];
-
+    
         } else {
-
+    
             /*
             =========================
             ADMIN
             =========================
             */
-
+    
+            $classes = ClassModel::all();
+    
             $widget = [
-
+    
                 'users' => User::count(),
-
+    
                 'admin' => User::where(
                     'role',
                     'Admin'
                 )->count(),
-
+    
                 'dosen' => User::where(
                     'role',
                     'Dosen'
                 )->count(),
-
+    
                 'mahasiswa' => User::where(
                     'role',
                     'User'
                 )->count(),
-
-                'classes' => ClassModel::count(),
-
+    
+                'classes' => $classes->count(),
+    
                 'monitoring' => Yolo::count(),
-
+    
                 'monitoring_today' => Yolo::whereDate(
                     'created_at',
                     now()->toDateString()
                 )->count()
-
+    
             ];
         }
-
+    
         return view(
             'home',
-            compact('widget')
+            compact('widget', 'classes')
         );
     }
 
