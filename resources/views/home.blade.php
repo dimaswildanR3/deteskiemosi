@@ -30,12 +30,7 @@
 
 </a>
 
-        <!-- <a href="{{ route('clear.data') }}"
-   class="btn btn-warning shadow-sm"
-   onclick="return confirm('Yakin ingin menghapus data?')">
 
-    <i class="fas fa-bolt"></i> Flash
-</a> -->
     </div>
 </div>
 

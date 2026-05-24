@@ -1,5 +1,5 @@
 /node_modules
-/storage/*.key
+# /storage/*.key
 python/venv/*
 python/venv.zip
 .env
