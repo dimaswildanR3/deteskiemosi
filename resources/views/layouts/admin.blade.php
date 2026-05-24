@@ -59,12 +59,14 @@
 
         <!-- Nav Item -->
       
-        <li class="nav-item {{ Nav::isRoute('classes.index') }}">
+        @if(Auth::user()->role == 'Admin')
+<li class="nav-item {{ Nav::isRoute('classes.index') }}">
     <a class="nav-link" href="{{ route('classes.index') }}">
         <i class="fas fa-fw fa-school"></i>
         <span>{{ __('Classes') }}</span>
     </a>
 </li>
+@endif
         <li class="nav-item {{ Nav::isRoute('monitoring.index') }}">
             <a class="nav-link" href="{{ route('monitoring.index') }}">
                 <i class="fas fa-fw fa-plus"></i>
@@ -73,12 +75,14 @@
         </li>
         
 
+        @if(Auth::check() && Auth::user()->role == 'Admin')
 <li class="nav-item {{ Nav::isRoute('basic.index') }}">
-            <a class="nav-link" href="{{ route('basic.index') }}">
-                <i class="fas fa-fw fa-plus"></i>
-                <span>{{ __('Usser Manegement') }}</span>
-            </a>
-        </li>
+    <a class="nav-link" href="{{ route('basic.index') }}">
+        <i class="fas fa-fw fa-plus"></i>
+        <span>{{ __('Usser Manegement') }}</span>
+    </a>
+</li>
+@endif
         <!-- Nav Item - Profile -->
         <li class="nav-item {{ Nav::isRoute('profile') }}">
             <a class="nav-link" href="{{ route('profile') }}">

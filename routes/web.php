@@ -32,6 +32,12 @@ Route::post('/start-detection', [DetectionController::class, 'start'])
 // AUTH REQUIRED
 // =====================
 Route::middleware('auth')->group(function () {
+    Route::get(
+        '/monitoring/export',
+        'SessionController@exportExcel'
+    )->name('monitoring.export');
+    Route::get('/monitoring/report', 'SessionController@report')
+    ->name('monitoring.report');
 
     // Dashboard
     Route::get('/home', [HomeController::class, 'index'])->name('home');

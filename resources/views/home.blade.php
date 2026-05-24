@@ -22,9 +22,13 @@
 
 </button>
 
-        <button class="btn btn-primary shadow-sm mr-2">
-            <i class="fas fa-file-alt"></i> Laporan
-        </button>
+<a href="{{ route('monitoring.export') }}"
+   class="btn btn-success shadow-sm mr-2">
+
+    <i class="fas fa-file-excel"></i>
+   Laporan
+
+</a>
 
         <a href="{{ route('clear.data') }}"
    class="btn btn-warning shadow-sm"

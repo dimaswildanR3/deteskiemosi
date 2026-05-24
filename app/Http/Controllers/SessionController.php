@@ -10,6 +10,8 @@ use App\FaceImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
+use Maatwebsite\Excel\Facades\Excel;
+
 class SessionController extends Controller
 {
     public function start(Request $request)
@@ -148,4 +150,272 @@ class SessionController extends Controller
             'Data berhasil dihapus'
         );
     }
+
+    public function report()
+{
+    $role = Auth::user()->role ?? '';
+
+    // =========================
+    // ADMIN = SEMUA DATA
+    // =========================
+    if ($role == 'Admin') {
+
+        $sessions = Session::latest()->get();
+
+        $detections = Detection::orderBy('timestamp', 'DESC')->get();
+
+        $summaries = Summary::latest()->get();
+
+        $faceImages = FaceImage::latest()->get();
+    }
+
+    // =========================
+    // DOSEN = DATA SENDIRI
+    // =========================
+    elseif ($role == 'Dosen') {
+
+        $sessionIds = Session::where('user_id', Auth::id())
+            ->pluck('id');
+
+        $sessions = Session::whereIn('id', $sessionIds)
+            ->latest()
+            ->get();
+
+        $detections = Detection::whereIn('session_id', $sessionIds)
+            ->latest()
+            ->get();
+
+        $summaries = Summary::whereIn('session_id', $sessionIds)
+            ->latest()
+            ->get();
+
+        $faceImages = FaceImage::whereIn('session_id', $sessionIds)
+            ->latest()
+            ->get();
+    }
+
+    // =========================
+    // ROLE LAIN DITOLAK
+    // =========================
+    else {
+
+        abort(403, 'Akses ditolak');
+    }
+
+    return view(
+        'monitoring.report',
+        compact(
+            'sessions',
+            'detections',
+            'summaries',
+            'faceImages'
+        )
+    );
+}
+public function exportExcel()
+{
+    $role = Auth::user()->role ?? '';
+
+    // =========================
+    // ADMIN = SEMUA DATA
+    // =========================
+    if ($role == 'Admin') {
+
+        $sessions = Session::all();
+
+        $detections = Detection::orderBy(
+            'timestamp',
+            'DESC'
+        )->get();
+
+        $summaries = Summary::all();
+
+        $faceImages = FaceImage::all();
+    }
+
+    // =========================
+    // DOSEN = DATA SENDIRI
+    // =========================
+    elseif ($role == 'Dosen') {
+
+        $sessionIds = Session::where(
+            'user_id',
+            Auth::id()
+        )->pluck('id');
+
+        $sessions = Session::whereIn(
+            'id',
+            $sessionIds
+        )->get();
+
+        $detections = Detection::whereIn(
+            'session_id',
+            $sessionIds
+        )
+        ->orderBy('timestamp', 'DESC')
+        ->get();
+
+        $summaries = Summary::whereIn(
+            'session_id',
+            $sessionIds
+        )->get();
+
+        $faceImages = FaceImage::whereIn(
+            'session_id',
+            $sessionIds
+        )->get();
+    }
+
+    // =========================
+    // ROLE LAIN DITOLAK
+    // =========================
+    else {
+
+        abort(403, 'Akses ditolak');
+    }
+
+    $data = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATA SESSION
+    |--------------------------------------------------------------------------
+    */
+
+    $data[] = ['DATA SESSION'];
+
+    $data[] = [
+        'ID',
+        'KELAS',
+        'DOSEN',
+        'WAKTU MULAI',
+        'WAKTU SELESAI',
+        'TOTAL MAHASISWA'
+    ];
+
+    foreach ($sessions as $s) {
+
+        $data[] = [
+            $s->id,
+            $s->nama_kelas,
+            $s->dosen,
+            $s->waktu_mulai,
+            $s->waktu_selesai,
+            $s->total_mahasiswa
+        ];
+    }
+
+    $data[] = [];
+    $data[] = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATA SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    $data[] = ['DATA SUMMARY'];
+
+    $data[] = [
+        'SESSION ID',
+        'TOTAL POSITIF',
+        'TOTAL NEGATIF',
+        'PERSEN POSITIF',
+        'PERSEN NEGATIF'
+    ];
+
+    foreach ($summaries as $s) {
+
+        $data[] = [
+            $s->session_id,
+            $s->total_positif,
+            $s->total_negatif,
+            $s->persen_positif,
+            $s->persen_negatif
+        ];
+    }
+
+    $data[] = [];
+    $data[] = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATA DETECTION
+    |--------------------------------------------------------------------------
+    */
+
+    $data[] = ['DATA DETECTION'];
+
+    $data[] = [
+        'ID',
+        'SESSION ID',
+        'NOMOR MAHASISWA',
+        'LABEL',
+        'CONFIDENCE',
+        'TIMESTAMP'
+    ];
+
+    foreach ($detections as $d) {
+
+        $data[] = [
+            $d->id,
+            $d->session_id,
+            $d->nomor_mahasiswa,
+            $d->label,
+            $d->confidence,
+            $d->timestamp
+        ];
+    }
+
+    $data[] = [];
+    $data[] = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATA FACE IMAGE
+    |--------------------------------------------------------------------------
+    */
+
+    $data[] = ['DATA FACE IMAGE'];
+
+    $data[] = [
+        'ID',
+        'SESSION ID',
+        'NOMOR MAHASISWA',
+        'LABEL',
+        'FILE PATH'
+    ];
+
+    foreach ($faceImages as $f) {
+
+        $data[] = [
+            $f->id,
+            $f->session_id,
+            $f->nomor_mahasiswa,
+            $f->label,
+            $f->file_path
+        ];
+    }
+
+    return Excel::download(
+
+        new class($data)
+        implements \Maatwebsite\Excel\Concerns\FromArray {
+
+            protected $data;
+
+            public function __construct($data)
+            {
+                $this->data = $data;
+            }
+
+            public function array(): array
+            {
+                return $this->data;
+            }
+        },
+
+        'laporan_monitoring.xlsx'
+    );
+}
 }
