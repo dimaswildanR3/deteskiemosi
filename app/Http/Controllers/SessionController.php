@@ -18,6 +18,7 @@ class SessionController extends Controller
             'nama_kelas' => $request->nama_kelas,
             'dosen' => $request->dosen,
             'waktu_mulai' => now(),
+            'waktu_selesai' => now(),
             'total_mahasiswa' => $request->total_mahasiswa
         ]);
 
