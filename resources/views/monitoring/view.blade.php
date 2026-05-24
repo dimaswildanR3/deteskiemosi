@@ -2,20 +2,11 @@
 
 @section('main-content')
 
-@php
-    // DATA DARI CONTROLLER
-    $totalCaptures = $session->total_captures ?? null;
-    $positiveRate = $session->positive_rate ?? null;
-    $avgSentiment = $session->avg_sentiment ?? null;
-
-    // fallback negative (karena tidak ada di DB)
-    $negativeRate = $positiveRate !== null ? (100 - $positiveRate) : null;
-@endphp
-
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
         Real-time Emotion Monitoring
     </h1>
+
     <span class="text-muted">
         <i class="fas fa-clock"></i>
         Session: {{ $session->session_name ?? '-' }}
@@ -35,7 +26,7 @@
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-gray-800">
-                    {{ $totalCaptures ?? '-' }}
+                    {{ $session->total_captures ?? 0 }}
                 </div>
                 <div class="text-xs font-weight-bold text-primary text-uppercase">
                     Total Captures
@@ -48,7 +39,7 @@
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-success">
-                    {{ $positiveRate !== null ? $positiveRate.'%' : '-' }}
+                    {{ $session->positive_rate ?? 0 }}%
                 </div>
                 <div class="text-xs font-weight-bold text-success text-uppercase">
                     Positive Rate
@@ -61,7 +52,7 @@
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-info">
-                    {{ $avgSentiment ?? '-' }}
+                    {{ $session->avg_sentiment ?? 0 }}
                 </div>
                 <div class="text-xs font-weight-bold text-info text-uppercase">
                     Avg. Sentiment
@@ -88,11 +79,11 @@
 
                 <div class="text-center mt-3">
                     <span class="text-success">
-                        Positive: {{ $positiveRate ?? '-' }}
+                        Positive: {{ $session->positive_rate ?? 0 }}%
                     </span>
                     <br>
                     <span class="text-danger">
-                        Negative: {{ $negativeRate ?? '-' }}
+                        Negative: {{ $session->negative_rate ?? 0 }}%
                     </span>
                 </div>
             </div>
@@ -121,16 +112,18 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    const positive = @json($positiveRate ?? 0);
-    const negative = @json($negativeRate ?? 0);
+    const positive = @json($session->positive_rate ?? 0);
+    const negative = @json($session->negative_rate ?? 0);
 
-    const labels = @json($session->timeline_labels ?? []);
-    const values = @json($session->timeline_values ?? []);
+    // 🔥 INI YANG BENAR DARI CONTROLLER (bukan session)
+    const labels = @json($widget['timeline_labels'] ?? []);
+    const values = @json($widget['timeline_values'] ?? []);
 
+    // fallback biar tidak kosong
     const safeLabels = labels.length ? labels : ["No Data"];
     const safeValues = values.length ? values : [0];
 
-    // PIE CHART
+    // ================= PIE =================
     new Chart(document.getElementById("pieChart"), {
         type: 'doughnut',
         data: {
@@ -147,7 +140,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // LINE CHART
+    // ================= LINE =================
     new Chart(document.getElementById("lineChart"), {
         type: 'line',
         data: {
@@ -158,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 borderColor: "#6f42c1",
                 backgroundColor: "rgba(111,66,193,0.1)",
                 fill: true,
-                tension: 0.3
+                tension: 0.4
             }]
         },
         options: {

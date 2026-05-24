@@ -56,7 +56,9 @@
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body text-center">
-                <div class="h3 mb-0 font-weight-bold text-gray-800">5</div>
+            <div class="h3 mb-0 font-weight-bold text-gray-800">
+    {{ $widget['monitoring'] }}
+</div>
                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                     Total Captures
                 </div>
@@ -68,7 +70,9 @@
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body text-center">
-                <div class="h3 mb-0 font-weight-bold text-success">60%</div>
+            <div class="h3 mb-0 font-weight-bold text-success">
+    {{ $widget['positive_rate'] }}%
+</div>
                 <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                     Positive Rate
                 </div>
@@ -80,9 +84,9 @@
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body text-center">
-                <div class="h3 mb-0 font-weight-bold" style="color: #6f42c1;">
-                    23
-                </div>
+            <div class="h3 mb-0 font-weight-bold" style="color: #6f42c1;">
+    {{ number_format($widget['avg_sentiment'], 2) }}
+</div>
                 <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                     Avg. Sentiment
                 </div>
@@ -517,41 +521,46 @@ document.addEventListener("DOMContentLoaded", function () {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    // 1. Data Dummy
     const sentimentData = {
-        positive: 3,
-        negative: 2
+        positive: {{ $widget['positive_rate'] ?? 0 }},
+        negative: {{ $widget['negative_rate'] ?? 0 }}
     };
 
-    const timelineLabels = ["0:00", "1:00", "2:00", "3:00", "4:00", "5:00"];
-    const timelineValues = [45, 65, -20, 30, -35, 50];
+    const timelineLabels = @json($widget['timeline_labels']);
+    const timelineValues = @json($widget['timeline_values']);
 
-    // 2. Pie/Doughnut Chart
+    // =========================
+    // PIE CHART
+    // =========================
     const ctxPie = document.getElementById("mySentimentPieChart").getContext('2d');
+
     new Chart(ctxPie, {
         type: 'doughnut',
         data: {
             labels: ["Positive", "Negative"],
             datasets: [{
-                data: [sentimentData.positive, sentimentData.negative],
+                data: [
+                    sentimentData.positive,
+                    sentimentData.negative
+                ],
                 backgroundColor: ['#1cc88a', '#e74a3b'],
-                hoverBackgroundColor: ['#17a673', '#be2617'],
-                hoverBorderColor: "rgba(234, 236, 244, 1)",
+                hoverBackgroundColor: ['#17a673', '#be2617']
             }]
         },
         options: {
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                }
+                legend: { display: false }
             },
-            cutout: '70%' // Membuat efek lubang di tengah
+            cutout: '70%'
         }
     });
 
-    // 3. Line Chart
+    // =========================
+    // LINE CHART (FIX UTAMA)
+    // =========================
     const ctxLine = document.getElementById("myExpressionLineChart").getContext('2d');
+
     new Chart(ctxLine, {
         type: 'line',
         data: {
@@ -559,48 +568,30 @@ document.addEventListener("DOMContentLoaded", function () {
             datasets: [{
                 label: "Sentiment Score",
                 data: timelineValues,
-                lineTension: 0.3,
-                backgroundColor: "rgba(111, 66, 193, 0.05)",
+
                 borderColor: "#6f42c1",
-                pointRadius: 3,
-                pointBackgroundColor: "#6f42c1",
-                pointBorderColor: "#6f42c1",
-                pointHoverRadius: 5,
-                pointHoverBackgroundColor: "#5a32a3",
-                pointHoverBorderColor: "#5a32a3",
-                pointHitRadius: 10,
-                pointBorderWidth: 2,
+                backgroundColor: "rgba(111, 66, 193, 0.05)",
+
                 fill: true,
+                tension: 0.4, // 🔥 bikin tidak kaku / garis lurus
+                spanGaps: true,
+
+                pointRadius: 3,
+                pointBackgroundColor: "#6f42c1"
             }]
         },
         options: {
             maintainAspectRatio: false,
+
             scales: {
-                x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    }
-                },
                 y: {
                     min: -100,
-                    max: 100,
-                    ticks: {
-                        stepSize: 50
-                    },
-                    grid: {
-                        color: "rgb(234, 236, 244)",
-                        zeroLineColor: "rgb(234, 236, 244)",
-                        drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
-                    }
+                    max: 100
                 }
             },
+
             plugins: {
-                legend: {
-                    display: false
-                }
+                legend: { display: false }
             }
         }
     });

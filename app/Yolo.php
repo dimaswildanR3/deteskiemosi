@@ -12,6 +12,7 @@ class Yolo extends Model
         'class_id',
         'session_name',
         'total_captures',
+        'negative_rate',
         'positive_rate',
         'avg_sentiment',
         'started_at',

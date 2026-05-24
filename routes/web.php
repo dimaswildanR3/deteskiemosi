@@ -59,7 +59,7 @@ Route::middleware('auth')->group(function () {
 
     // Monitoring
     Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
-    Route::get('/monitoring/view/{id}', [MonitoringController::class, 'view'])->name('monitoring.view');
+    Route::get('/monitoring/view/{id}', [HomeController::class, 'view'])->name('monitoring.view');
 
     // Basic (Resource)
     Route::resource('basic', BasicController::class);
