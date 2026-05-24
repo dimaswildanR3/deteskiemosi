@@ -6,26 +6,7 @@
     Monitoring Data Perkelas
 </h1>
 
-@foreach($sessions as $tanggal => $items)
-
 <div class="card shadow mb-4">
-
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-
-        <h6 class="m-0 font-weight-bold text-primary">
-
-            Tanggal :
-            {{ \Carbon\Carbon::parse($tanggal)->format('d M Y') }}
-
-        </h6>
-
-        <span class="badge badge-primary">
-
-            {{ count($items) }} Session
-
-        </span>
-
-    </div>
 
     <div class="card-body">
 
@@ -38,11 +19,10 @@
                     <tr>
                         <th width="50">No</th>
                         <th>Kelas</th>
-                        <th>Session</th>
-                        <th>Total Capture</th>
-                        <th>Positive</th>
-                        <th>Negative</th>
-                        <th>Avg Sentiment</th>
+                        <th>Dosen</th>
+                        <th>Total Mahasiswa</th>
+                        <th>Waktu Mulai</th>
+                        <th>Waktu Selesai</th>
                         <th>Status</th>
                         <th width="100">Aksi</th>
                     </tr>
@@ -51,7 +31,7 @@
 
                 <tbody>
 
-                    @foreach($items as $item)
+                    @foreach($sessions as $item)
 
                     <tr>
 
@@ -60,62 +40,30 @@
                         </td>
 
                         <td>
+                            <strong>{{ $item->nama_kelas }}</strong>
+                        </td>
 
-                            <strong>
-                                {{ $item->class->nama_kelas ?? '-' }}
-                            </strong>
+                        <td>
+                            {{ $item->dosen }}
+                        </td>
 
-                            <br>
+                        <td>
+                            {{ $item->total_mahasiswa }}
+                        </td>
 
-                            <small class="text-muted">
+                        <td>
+                            {{ \Carbon\Carbon::parse($item->waktu_mulai)->format('d M Y H:i') }}
+                        </td>
 
-                                {{ $item->class->mata_kuliah ?? '-' }}
-
-                            </small>
-
+                        <td>
+                            {{ $item->waktu_selesai
+                                ? \Carbon\Carbon::parse($item->waktu_selesai)->format('d M Y H:i')
+                                : '-' }}
                         </td>
 
                         <td>
 
-                            {{ $item->session_name }}
-
-                        </td>
-
-                        <td>
-
-                            {{ $item->total_captures }}
-
-                        </td>
-
-                        <td>
-
-                            <span class="text-success font-weight-bold">
-
-                                {{ $item->positive_rate }}%
-
-                            </span>
-
-                        </td>
-
-                        <td>
-
-                            <span class="text-danger font-weight-bold">
-
-                                {{ 100 - $item->positive_rate }}%
-
-                            </span>
-
-                        </td>
-
-                        <td>
-
-                            {{ $item->avg_sentiment }}
-
-                        </td>
-
-                        <td>
-
-                            @if($item->ended_at)
+                            @if($item->waktu_selesai)
 
                                 <span class="badge badge-success">
                                     Selesai
@@ -155,7 +103,5 @@
     </div>
 
 </div>
-
-@endforeach
 
 @endsection

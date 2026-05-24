@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
             formData.append("nomor_mahasiswa", studentCounter);
             formData.append("label", label);
             formData.append("confidence", confidence);
-            formData.append("file_path", blob, "capture.jpg");
+            formData.append("image", blob, "capture.jpg");
 
             fetch(`${API}/store`, {
                 method: "POST",

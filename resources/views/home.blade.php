@@ -30,12 +30,12 @@
 
 </a>
 
-        <a href="{{ route('clear.data') }}"
+        <!-- <a href="{{ route('clear.data') }}"
    class="btn btn-warning shadow-sm"
    onclick="return confirm('Yakin ingin menghapus data?')">
 
     <i class="fas fa-bolt"></i> Flash
-</a>
+</a> -->
     </div>
 </div>
 
@@ -114,15 +114,15 @@
                 </div>
 
                 <div class="mt-4 text-center small">
-                    <span class="mr-3">
-                        <i class="fas fa-circle text-success"></i>
-                        Positive: 60% (3)
-                    </span>
+                <span class="mr-3">
+    <i class="fas fa-circle text-success"></i>
+    Positive: {{ $widget['positive_rate'] }}%
+</span>
 
-                    <span class="mr-3">
-                        <i class="fas fa-circle text-danger"></i>
-                        Negative: 40% (2)
-                    </span>
+<span class="mr-3">
+    <i class="fas fa-circle text-danger"></i>
+    Negative: {{ $widget['negative_rate'] }}%
+</span>
                 </div>
 
             </div>
@@ -167,9 +167,12 @@
                     <i class="fas fa-camera"></i> Captured Moments
                 </h6>
 
-                <button class="btn btn-sm btn-outline-danger">
-                    <i class="fas fa-trash"></i> Clear
-                </button>
+                <a href="{{ route('clear.data') }}"
+   class="btn btn-sm btn-outline-danger shadow-sm"
+   onclick="return confirm('Yakin ingin menghapus data?')">
+
+    <i class="fas fa-trash"></i> Clear
+</a>
 
             </div>
 
@@ -177,41 +180,20 @@
 
                 <div class="row text-center">
 
-                    <div class="col-md-4 mb-3">
-                        <img src="https://via.placeholder.com/300x200"
-                            class="img-fluid rounded shadow-sm mb-2"
-                            alt="0:00">
+                @foreach ($widget['latest_faces'] as $face)
+<div class="col-md-4 mb-3">
+   <img src="{{ asset('storage/' . $face->file_path) }}"
+     class="img-fluid rounded shadow-sm mb-2">
 
-                        <p class="mb-1 font-weight-bold">0:00</p>
+    <p class="mb-1 font-weight-bold">
+    {{ \Carbon\Carbon::parse($face->created_at)->format('H:i') }}
+    </p>
 
-                        <span class="badge badge-success px-3 py-2">
-                            😊 Positive
-                        </span>
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <img src="https://via.placeholder.com/300x200"
-                            class="img-fluid rounded shadow-sm mb-2"
-                            alt="1:00">
-
-                        <p class="mb-1 font-weight-bold">1:00</p>
-
-                        <span class="badge badge-success px-3 py-2">
-                            😊 Positive
-                        </span>
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <img src="https://via.placeholder.com/300x200"
-                            class="img-fluid rounded shadow-sm mb-2"
-                            alt="2:00">
-
-                        <p class="mb-1 font-weight-bold">2:00</p>
-
-                        <span class="badge badge-danger px-3 py-2">
-                            😟 Negative
-                        </span>
-                    </div>
+    <span class="badge {{ $face->label == 'POSITIF' ? 'badge-success' : 'badge-danger' }} px-3 py-2">
+        {{ $face->label }}
+    </span>
+</div>
+@endforeach
 
                 </div>
 

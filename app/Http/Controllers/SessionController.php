@@ -21,7 +21,7 @@ class SessionController extends Controller
             'nama_kelas' => $request->nama_kelas,
             'dosen' => $request->dosen,
             'waktu_mulai' => now(),
-            'waktu_selesai' => now(),
+
             'total_mahasiswa' => $request->total_mahasiswa
         ]);
 
@@ -54,13 +54,16 @@ class SessionController extends Controller
             'timestamp' => now()
         ]);
     
-        // 2. simpan gambar wajah
-        FaceImage::create([
-            'session_id' => $request->session_id,
-            'nomor_mahasiswa' => $request->nomor_mahasiswa,
-            'label' => $request->label,
-            'file_path' => $request->file_path
-        ]);
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('face_images', 'public');
+        
+            FaceImage::create([
+                'session_id' => $request->session_id,
+                'nomor_mahasiswa' => $request->nomor_mahasiswa,
+                'label' => $request->label,
+                'file_path' => $path
+            ]);
+        }
     
         // 3. ambil summary
         $summary = Summary::firstOrCreate(
@@ -109,10 +112,10 @@ class SessionController extends Controller
         // =========================
         if ($role == 'Admin') {
     
-            Detection::truncate();
-            Summary::truncate();
+            // Detection::truncate();
+            // Summary::truncate();
             FaceImage::truncate();
-            Session::truncate();
+            // Session::truncate();
     
         }
     
@@ -126,14 +129,14 @@ class SessionController extends Controller
                 ->pluck('id');
     
             // hapus child table dulu
-            Detection::whereIn('session_id', $sessionIds)->delete();
+            // Detection::whereIn('session_id', $sessionIds)->delete();
     
-            Summary::whereIn('session_id', $sessionIds)->delete();
+            // Summary::whereIn('session_id', $sessionIds)->delete();
     
             FaceImage::whereIn('session_id', $sessionIds)->delete();
     
             // hapus session
-            Session::whereIn('id', $sessionIds)->delete();
+            // Session::whereIn('id', $sessionIds)->delete();
         }
     
         // =========================
@@ -433,7 +436,9 @@ public function stop(Request $request)
             'message' => 'Session tidak ditemukan'
         ], 404);
     }
-
+    $session->update([
+        'waktu_selesai' => now()
+    ]);
     // 2. ambil summary
     $summary = Summary::where('session_id', $session->id)->first();
 

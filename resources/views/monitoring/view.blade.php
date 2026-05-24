@@ -26,7 +26,7 @@
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-gray-800">
-                    {{ $session->total_captures ?? 0 }}
+                    {{ $widget['monitoring'] ?? 0 }}
                 </div>
                 <div class="text-xs font-weight-bold text-primary text-uppercase">
                     Total Captures
@@ -39,7 +39,7 @@
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-success">
-                    {{ $session->positive_rate ?? 0 }}%
+                    {{ $widget['positive_rate'] ?? 0 }}%
                 </div>
                 <div class="text-xs font-weight-bold text-success text-uppercase">
                     Positive Rate
@@ -52,7 +52,7 @@
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body text-center">
                 <div class="h3 font-weight-bold text-info">
-                    {{ $session->avg_sentiment ?? 0 }}
+                    {{ $widget['avg_sentiment'] ?? 0 }}
                 </div>
                 <div class="text-xs font-weight-bold text-info text-uppercase">
                     Avg. Sentiment
@@ -66,6 +66,7 @@
 {{-- ================= CHART ================= --}}
 <div class="row">
 
+    {{-- PIE CHART --}}
     <div class="col-lg-5 mb-4">
         <div class="card shadow">
             <div class="card-header">
@@ -79,17 +80,18 @@
 
                 <div class="text-center mt-3">
                     <span class="text-success">
-                        Positive: {{ $session->positive_rate ?? 0 }}%
+                        Positive: {{ $widget['positive_rate'] ?? 0 }}%
                     </span>
                     <br>
                     <span class="text-danger">
-                        Negative: {{ $session->negative_rate ?? 0 }}%
+                        Negative: {{ $widget['negative_rate'] ?? 0 }}%
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
+    {{-- LINE CHART --}}
     <div class="col-lg-7 mb-4">
         <div class="card shadow">
             <div class="card-header">
@@ -112,18 +114,17 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    const positive = @json($session->positive_rate ?? 0);
-    const negative = @json($session->negative_rate ?? 0);
+    // ================= DATA DARI CONTROLLER =================
+    const positive = @json($widget['positive_rate'] ?? 0);
+    const negative = @json($widget['negative_rate'] ?? 0);
 
-    // 🔥 INI YANG BENAR DARI CONTROLLER (bukan session)
     const labels = @json($widget['timeline_labels'] ?? []);
     const values = @json($widget['timeline_values'] ?? []);
 
-    // fallback biar tidak kosong
     const safeLabels = labels.length ? labels : ["No Data"];
     const safeValues = values.length ? values : [0];
 
-    // ================= PIE =================
+    // ================= PIE CHART =================
     new Chart(document.getElementById("pieChart"), {
         type: 'doughnut',
         data: {
@@ -134,13 +135,15 @@ document.addEventListener("DOMContentLoaded", function () {
             }]
         },
         options: {
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { display: false }
+            },
             maintainAspectRatio: false,
             cutout: '70%'
         }
     });
 
-    // ================= LINE =================
+    // ================= LINE CHART =================
     new Chart(document.getElementById("lineChart"), {
         type: 'line',
         data: {
@@ -157,7 +160,13 @@ document.addEventListener("DOMContentLoaded", function () {
         options: {
             maintainAspectRatio: false,
             scales: {
-                y: { min: -100, max: 100 }
+                y: {
+                    min: -1,
+                    max: 1,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
             }
         }
     });

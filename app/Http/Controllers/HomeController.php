@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\User;
 use App\Yolo;
+use App\Session;
+use App\Detection;
+use App\FaceImage;
+use App\Summary;
+use Carbon\Carbon;
 use App\ClassModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,45 +44,85 @@ class HomeController extends Controller
     {
         $user = Auth::user();
     
+        // =========================
+        // CLASS FILTER
+        // =========================
         if ($user->role == 'Dosen') {
     
             $classes = ClassModel::where('dosen_id', $user->id)->get();
     
-            $query = Yolo::whereHas('class', function ($q) use ($user) {
-                $q->where('dosen_id', $user->id);
+            $sessionQuery = Session::where('user_id', $user->id);
+    
+            $detectionQuery = Detection::whereHas('session', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+    
+            $summaryQuery = Summary::whereHas('session', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+    
+            $faceQuery = FaceImage::whereHas('session', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
     
         } else {
     
             $classes = ClassModel::all();
-            $query = Yolo::query();
+    
+            $sessionQuery = Session::query();
+            $detectionQuery = Detection::query();
+            $summaryQuery = Summary::query();
+            $faceQuery = FaceImage::query();
         }
     
         // =========================
-        // SESSION TERAKHIR (optional widget)
+        // SESSION TERAKHIR
         // =========================
-        $session = (clone $query)->latest()->first();
+        $session = (clone $sessionQuery)->latest()->first();
     
         // =========================
-        // TIMELINE FIX (INI KUNCI UTAMA)
+        // TOTAL CAPTURES
         // =========================
-        $timeline = (clone $query)
-            ->orderBy('created_at')
+        $monitoring = (clone $detectionQuery)->count();
+    
+        // =========================
+        // SUMMARY RATE
+        // =========================
+        $summary = (clone $summaryQuery)->latest()->first();
+    
+        $positive = $summary->total_positif ?? 0;
+        $negative = $summary->total_negatif ?? 0;
+    
+        $total = $positive + $negative;
+    
+        $positive_rate = $total ? round(($positive / $total) * 100, 2) : 0;
+        $negative_rate = $total ? round(($negative / $total) * 100, 2) : 0;
+    
+        // =========================
+        // TIMELINE (FROM DETECTION)
+        // =========================
+        $timeline = (clone $detectionQuery)
+            ->orderBy('timestamp', 'asc')
             ->limit(20)
             ->get();
     
         $timeline_labels = $timeline->map(function ($item) {
-            return $item->created_at->format('H:i:s');
+            return $item->timestamp
+                ? \Carbon\Carbon::parse($item->timestamp)->format('H:i:s')
+                : ($item->created_at ? $item->created_at->format('H:i:s') : '00:00:00');
         });
     
-        /*
-        🔥 FIX PENTING:
-        jangan pakai avg_sentiment (biasanya stabil / summary)
-        tapi pakai SELISIH POSITIVE - NEGATIVE biar naik turun
-        */
         $timeline_values = $timeline->map(function ($item) {
-            return (float) ($item->positive_rate - $item->negative_rate);
+            return $item->label == 'POSITIF' ? 1 : -1;
         });
+    
+        // =========================
+        // FACE IMAGE (3 TERBARU)
+        // =========================
+        $latest_faces = (clone $faceQuery)
+            ->orderBy('created_at', 'desc')
+            ->limit(3)
+            ->get();
     
         // =========================
         // WIDGET
@@ -86,17 +131,19 @@ class HomeController extends Controller
             'users' => ($user->role == 'Admin') ? User::count() : 0,
             'classes' => $classes->count(),
     
-            'monitoring' => (clone $query)->sum('total_captures'),
+            'monitoring' => $monitoring,
     
-            'positive_rate' => round((clone $query)->avg('positive_rate') ?? 0, 2),
+            'positive_rate' => $positive_rate,
+            'negative_rate' => $negative_rate,
     
-            'negative_rate' => round((clone $query)->avg('negative_rate') ?? 0, 2),
+            // FIX BIAR BLADE AMAN
+            'avg_sentiment' => ($positive_rate - $negative_rate),
     
-            'avg_sentiment' => round((clone $query)->avg('avg_sentiment') ?? 0, 2),
-    
-            // TIMELINE
             'timeline_labels' => $timeline_labels,
             'timeline_values' => $timeline_values,
+    
+            // 🔥 FACE IMAGE
+            'latest_faces' => $latest_faces,
         ];
     
         return view('home', compact('widget', 'classes'));
@@ -110,47 +157,67 @@ class HomeController extends Controller
         // =========================
         // AMBIL DATA YOLO BY ID
         // =========================
-        $session = Yolo::findOrFail($id);
+        $session = Session::findOrFail($id);
     
         // ambil class (kalau relasi ada)
-        $classes = ClassModel::where('id', $session->class_id)->get();
+        $classes = ClassModel::where('id', $session->nama_kelas)->get();
     
         // =========================
         // BASE QUERY (HANYA 1 SESSION)
         // =========================
-        $query = Yolo::where('id', $id);
+        $query = Session::where('id', $id);
+        $summaryQuery = Summary::where('session_id', $session->id);
+        $summary = (clone $summaryQuery)->latest()->first();
     
+        $positive = $summary->total_positif ?? 0;
+        $negative = $summary->total_negatif ?? 0;
+    
+        $total = $positive + $negative;
+    
+        $positive_rate = $total ? round(($positive / $total) * 100, 2) : 0;
+        $negative_rate = $total ? round(($negative / $total) * 100, 2) : 0;
         // =========================
         // WIDGET
         // =========================
+        $timeline = Detection::where('session_id', $session->id)
+        ->orderBy('timestamp', 'asc')
+        ->limit(30)
+        ->get();
+
         $widget = [
             'classes' => $classes->count(),
     
-            'monitoring' => $session->total_captures,
+            'monitoring' => $timeline->count(),
     
-            'positive_rate' => round($session->positive_rate ?? 0, 2),
+            'positive_rate' =>$positive_rate,
     
-            'negative_rate' => round($session->negative_rate ?? 0, 2),
+            'negative_rate' => $negative_rate,
     
-            'avg_sentiment' => round($session->avg_sentiment ?? 0, 2),
+            'avg_sentiment' =>($positive_rate - $negative_rate),
         ];
     
         // =========================
         // TIMELINE (FIX REAL)
         // =========================
         // kalau hanya 1 session → kita pecah jadi fake timeline dari perubahan kecil
-        $timeline = Yolo::where('class_id', $session->class_id)
-            ->orderBy('created_at', 'asc')
-            ->limit(30)
-            ->get();
+        // $timeline = Session::where('nama_kelas', $session->nama_kelas)
+        //     ->orderBy('created_at', 'asc')
+        //     ->limit(30)
+        //     ->get();
+  
     
-        $widget['timeline_labels'] = $timeline->map(function ($item) {
-            return $item->created_at->format('H:i:s');
-        })->values();
+        $timeline = Detection::where('session_id', $session->id)
+        ->orderBy('timestamp', 'asc')
+        ->limit(30)
+        ->get();
     
-        $widget['timeline_values'] = $timeline->map(function ($item) {
-            return (float) $item->avg_sentiment;
-        })->values();
+    $widget['timeline_labels'] = $timeline->map(function ($item) {
+        return Carbon::parse($item->timestamp)->format('H:i:s');
+    })->values();
+    
+    $widget['timeline_values'] = $timeline->map(function ($item) {
+        return $item->label === 'POSITIF' ? 1 : -1;
+    })->values();
     
         return view('monitoring/view', compact('widget', 'classes', 'session'));
     }

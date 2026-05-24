@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Yolo;
+use App\Session;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,31 +11,19 @@ class MonitoringController extends Controller
 {
     public function index()
     {
-        $query = Yolo::with('class', 'user');
-
+        $query = Session::query();
+    
         // kalau dosen hanya lihat miliknya
         if (Auth::user()->role == 'Dosen') {
-
-            $query->whereHas('class', function ($q) {
-
-                $q->where('dosen_id', Auth::id());
-
-            });
-
+    
+            $query->where('dosen', Auth::user()->id);
+            // atau kalau kamu pakai ID, sesuaikan fieldnya
         }
-
-        // ambil terbaru
+    
         $sessions = $query
             ->latest()
-            ->get()
-            ->groupBy(function ($item) {
-
-                return \Carbon\Carbon::parse(
-                    $item->created_at
-                )->format('Y-m-d');
-
-            });
-
+            ->get();
+    
         return view('monitoring.index', compact('sessions'));
     }
 
