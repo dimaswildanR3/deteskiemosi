@@ -22,7 +22,12 @@
     <!-- Favicon -->
     <link rel="icon"
       type="image/png"
-      href="{{ secure_asset('img/favicon.png') }}?v=2">
+      sizes="32x32"
+      href="/img/favicon.png?v=10">
+
+<link rel="shortcut icon"
+      href="/img/favicon.png?v=10">
+      
     @stack('css')
 </head>
 <body id="page-top">
