@@ -26,3 +26,6 @@ Route::prefix('api')->group(function () {
     // 🔥 SATU ENDPOINT UNTUK SEMUA DETEKSI
     Route::post('/store', [SessionController::class, 'store']);
 });
+Route::post('/session/start', [SessionController::class, 'start']);
+Route::post('/store', [SessionController::class, 'store']);
+Route::post('/session/stop', [SessionController::class, 'stop']);

@@ -300,7 +300,18 @@
                     </div>
                     <div class="text-center mb-4">
 
-                    <video id="previewKamera" autoplay playsinline muted style="display: none;"></video>
+<!-- <video id="previewKamera"
+    autoplay
+    playsinline
+    muted
+    style="
+        width:100%;
+        max-height:350px;
+        border-radius:15px;
+        background:#000;
+    ">
+</video> -->
+
 </div>
                     {{-- SELECT --}}
                     <div class="form-group">
@@ -403,6 +414,113 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
+    const btnDashboard = document.getElementById("btnDashboardDeteksi");
+    const btnMulai = document.getElementById("btnMulaiDeteksi");
+
+    let cameraStream = null;
+    let isDetecting = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | START DETEKSI
+    |--------------------------------------------------------------------------
+    */
+
+    btnMulai.addEventListener("click", async function () {
+
+        try {
+
+            // buka kamera (TAPI TIDAK DITAMPILKAN)
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+
+            isDetecting = true;
+
+            // tutup modal
+            $("#modalDeteksi").modal("hide");
+
+            // ubah tombol dashboard jadi STOP
+            btnDashboard.innerHTML = `
+                <i class="fas fa-stop-circle"></i>
+                Stop Deteksi
+            `;
+
+            btnDashboard.classList.remove("btn-success");
+            btnDashboard.classList.add("btn-danger");
+
+            btnDashboard.removeAttribute("data-toggle");
+            btnDashboard.removeAttribute("data-target");
+
+            console.log("Kamera aktif (background)");
+
+            /*
+            |--------------------------------------------------------------------------
+            | JALANKAN PYTHON (nanti di sini)
+            |--------------------------------------------------------------------------
+            */
+
+            // fetch("/start-python");
+
+        } catch (err) {
+
+            console.log("CAMERA ERROR:", err);
+
+            alert(err.name + " - " + err.message);
+        }
+
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOP DETEKSI
+    |--------------------------------------------------------------------------
+    */
+
+    btnDashboard.addEventListener("click", function (e) {
+
+        if (!isDetecting) return;
+
+        e.preventDefault();
+
+        // stop kamera
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        isDetecting = false;
+
+        // balikin tombol
+        btnDashboard.innerHTML = `
+            <i class="fas fa-camera"></i>
+            Deteksi Kamera
+        `;
+
+        btnDashboard.classList.remove("btn-danger");
+        btnDashboard.classList.add("btn-success");
+
+        btnDashboard.setAttribute("data-toggle", "modal");
+        btnDashboard.setAttribute("data-target", "#modalDeteksi");
+
+        console.log("Kamera dimatikan");
+
+        /*
+        |--------------------------------------------------------------------------
+        | STOP PYTHON (nanti di sini)
+        |--------------------------------------------------------------------------
+        */
+
+        // fetch("/stop-python");
+
+    });
+
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
     const sentimentData = {
         positive: {{ $widget['positive_rate'] ?? 0 }},
         negative: {{ $widget['negative_rate'] ?? 0 }}
@@ -480,5 +598,122 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 </script>
-<script src="{{ asset('js/detection.js') }}"></script>
-<script defer src="https://unpkg.com/face-api.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const btnDashboard = document.getElementById("btnDashboardDeteksi");
+    const btnMulai = document.getElementById("btnMulaiDeteksi");
+    const form = document.querySelector("#modalDeteksi form");
+
+    let cameraStream = null;
+    let isDetecting = false;
+
+    // =========================
+    // START CAMERA + KIRIM KE LARAVEL
+    // =========================
+    btnMulai?.addEventListener("click", async function (e) {
+        e.preventDefault();
+
+        try {
+            // 1. CAMERA
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+
+            isDetecting = true;
+
+            console.log("Camera ON");
+
+            // 2. CLOSE MODAL
+            $("#modalDeteksi").modal("hide");
+
+            // 3. KIRIM KE CONTROLLER
+            const formData = new FormData(form);
+
+            const response = await fetch(form.action, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    "Accept": "application/json"
+                },
+                body: formData
+            });
+
+            // DEBUG RESPONSE
+            const text = await response.text();
+            console.log("RAW RESPONSE:", text);
+
+            // kalau JSON
+            let result;
+            try {
+                result = JSON.parse(text);
+                console.log("SUCCESS:", result);
+            } catch (e) {
+                console.warn("Bukan JSON dari controller");
+            }
+
+            // 4. UPDATE BUTTON
+            setRunning();
+
+        } catch (err) {
+            console.error("ERROR:", err);
+            alert(err.message);
+        }
+    });
+
+    // =========================
+    // STOP DETECTION
+    // =========================
+    btnDashboard?.addEventListener("click", function (e) {
+
+        if (!isDetecting) return;
+
+        e.preventDefault();
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+        }
+
+        isDetecting = false;
+
+        fetch("/stop-detection", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+            }
+        });
+
+        setIdle();
+
+        console.log("STOP DETECTION");
+    });
+
+    // =========================
+    // UI STATE
+    // =========================
+    function setRunning() {
+        btnDashboard.innerHTML = `
+            <i class="fas fa-stop-circle"></i> Stop Deteksi
+        `;
+        btnDashboard.classList.remove("btn-success");
+        btnDashboard.classList.add("btn-danger");
+
+        btnDashboard.removeAttribute("data-toggle");
+        btnDashboard.removeAttribute("data-target");
+    }
+
+    function setIdle() {
+        btnDashboard.innerHTML = `
+            <i class="fas fa-camera"></i> Deteksi Kamera
+        `;
+        btnDashboard.classList.remove("btn-danger");
+        btnDashboard.classList.add("btn-success");
+
+        btnDashboard.setAttribute("data-toggle", "modal");
+        btnDashboard.setAttribute("data-target", "#modalDeteksi");
+    }
+
+});
+</script>

@@ -7,6 +7,7 @@ use App\Session;
 use App\Detection;
 use App\Summary;
 use App\FaceImage;
+use App\Yolo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -31,8 +32,10 @@ class SessionController extends Controller
             'persen_positif' => 0,
             'persen_negatif' => 0
         ]);
-
-        return response()->json($session);
+        return response()->json([
+            'status' => 'ok',
+            'session_id' => $session->id
+        ]);
     }
 
     /*
@@ -417,5 +420,70 @@ public function exportExcel()
 
         'laporan_monitoring.xlsx'
     );
+}
+
+public function stop(Request $request)
+{
+    // 1. ambil session dari request (WAJIB lebih aman)
+    $session = Session::find($request->session_id);
+
+    if (!$session) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Session tidak ditemukan'
+        ], 404);
+    }
+
+    // 2. ambil summary
+    $summary = Summary::where('session_id', $session->id)->first();
+
+    if (!$summary) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Summary tidak ditemukan'
+        ], 404);
+    }
+
+    // 3. hitung total capture (dari detection)
+    $totalCaptures = \App\Detection::where('session_id', $session->id)->count();
+
+    // 4. insert ke tabel YOLO
+    $yolo = \App\Yolo::create([
+        'user_id'         => $session->dosen ?? null,
+        'class_id'        => $session->nama_kelas ?? null,
+        'session_name'    => $session->nama_kelas,
+        'total_captures'  => $totalCaptures,
+        'positive_rate'   => $summary->persen_positif ?? 0,
+        'negative_rate'   => $summary->persen_negatif ?? 0,
+        'avg_sentiment'   => $this->calculateAvgSentiment($session->id),
+        'started_at'      => $session->waktu_mulai,
+        'ended_at'        => now(),
+    ]);
+
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'YOLO report saved',
+        'data' => $yolo
+    ]);
+}
+private function calculateAvgSentiment($sessionId)
+{
+    $detections = \App\Detection::where('session_id', $sessionId)->get();
+
+    if ($detections->count() == 0) {
+        return 0;
+    }
+
+    $score = 0;
+
+    foreach ($detections as $d) {
+        if ($d->label == 'POSITIF') {
+            $score += 1;
+        } else {
+            $score -= 1;
+        }
+    }
+
+    return round($score / $detections->count(), 2);
 }
 }
