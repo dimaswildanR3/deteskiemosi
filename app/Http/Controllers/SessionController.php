@@ -48,8 +48,16 @@ class SessionController extends Controller
             'confidence' => $request->confidence,
             'timestamp' => now()
         ]);
-
-        // 2. ambil summary (AMAN)
+    
+        // 2. simpan gambar wajah
+        FaceImage::create([
+            'session_id' => $request->session_id,
+            'nomor_mahasiswa' => $request->nomor_mahasiswa,
+            'label' => $request->label,
+            'file_path' => $request->file_path
+        ]);
+    
+        // 3. ambil summary
         $summary = Summary::firstOrCreate(
             ['session_id' => $request->session_id],
             [
@@ -59,24 +67,27 @@ class SessionController extends Controller
                 'persen_negatif' => 0
             ]
         );
-
-        // 3. update counter
+    
+        // 4. update counter
         if ($request->label == 'POSITIF') {
             $summary->total_positif++;
         } else {
             $summary->total_negatif++;
         }
-
-        // 4. hitung persen
+    
+        // 5. hitung persen
         $total = $summary->total_positif + $summary->total_negatif;
-
+    
         if ($total > 0) {
-            $summary->persen_positif = ($summary->total_positif / $total) * 100;
-            $summary->persen_negatif = ($summary->total_negatif / $total) * 100;
+            $summary->persen_positif =
+                ($summary->total_positif / $total) * 100;
+    
+            $summary->persen_negatif =
+                ($summary->total_negatif / $total) * 100;
         }
-
+    
         $summary->save();
-
+    
         return response()->json([
             'status' => 'ok'
         ]);

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FaceImage extends Model
 {
     public $timestamps = false;
-    protected $table = 'face_detection_summary';
+    protected $table = 'snapshots';
     protected $fillable = [
         'session_id',
         'nomor_mahasiswa',
