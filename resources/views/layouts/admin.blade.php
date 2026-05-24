@@ -20,14 +20,9 @@
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
 
     <!-- Favicon -->
-    <link rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="/img/favicon.png?v=10">
-
-<link rel="shortcut icon"
-      href="/img/favicon.png?v=10">
-      
+    <link href="https://deteksiemosi.com/img/favicon.png"
+      rel="icon"
+      type="image/png">
     @stack('css')
 </head>
 <body id="page-top">
