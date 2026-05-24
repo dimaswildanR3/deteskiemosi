@@ -462,4 +462,4 @@ document.addEventListener("DOMContentLoaded", function () {
     
 </script>
 <script src="https://deteksiemosi.com/js/detection.js"></script>
-<script defer src="https://unpkg.com/face-api.js"></script>
+<!-- <script defer src="https://unpkg.com/face-api.js"></script> -->
