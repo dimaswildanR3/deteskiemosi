@@ -20,8 +20,9 @@
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
 
     <!-- Favicon -->
-    <link href="{{ asset('img/favicon.png') }}" rel="icon" type="image/png">
-
+    <link rel="icon"
+      type="image/png"
+      href="{{ secure_asset('img/favicon.png') }}?v=2">
     @stack('css')
 </head>
 <body id="page-top">
