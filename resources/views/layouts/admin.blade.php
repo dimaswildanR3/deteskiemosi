@@ -112,9 +112,9 @@
         <hr class="sidebar-divider d-none d-md-block">
 
         <!-- Sidebar Toggler (Sidebar) -->
-        <div class="text-center">
-    <button class="rounded-circle border-0" id="sidebarToggle"></button>
-</div>
+        <button id="sidebarToggle"
+        style="width:50px;height:50px;background:red;">
+</button>
 
     </ul>
     <!-- End of Sidebar -->
