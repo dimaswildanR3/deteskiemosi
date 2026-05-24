@@ -1,6 +1,7 @@
 /node_modules
 /storage/*.key
-python/*
+python/venv/*
+python/venv.zip
 .env
 .phpunit.result.cache
 Homestead.json

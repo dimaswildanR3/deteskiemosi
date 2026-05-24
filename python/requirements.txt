@@ -1,0 +1,9 @@
+ultralytics
+opencv-python
+lapx
+numpy
+requests
+retina-face
+deepface
+tensorflow
+albumentations
