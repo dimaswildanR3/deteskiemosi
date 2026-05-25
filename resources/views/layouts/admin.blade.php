@@ -284,17 +284,14 @@
     $photo = Auth::user()->profile_photo;
 @endphp
 
-@if($photo && file_exists(public_path($photo)))
+@if($photo)
     <img src="{{ asset($photo) }}"
          class="img-profile rounded-circle"
          style="width: 40px; height: 40px; object-fit: cover;">
 @else
-
-
     <figure class="img-profile rounded-circle avatar font-weight-bold"
             data-initial="{{ Auth::user()->name[0] }}">
     </figure>
-
 @endif
                         </a>
                         <!-- Dropdown - User Information -->
