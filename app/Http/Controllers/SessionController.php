@@ -58,19 +58,18 @@ class SessionController extends Controller
 
             $file = $request->file('image');
         
-            $filename = uniqid() . '.jpg';
+            $filename = uniqid().'.jpg';
         
-            $destination = public_path('uploads/face_images');
+            // 🔥 FIX CPANEL PATH
+            $destination = $_SERVER['DOCUMENT_ROOT'].'/uploads/face_images';
         
-            // 🔥 INI YANG KAMU KURANG
             if (!file_exists($destination)) {
                 mkdir($destination, 0755, true);
             }
         
-            // move file
             $file->move($destination, $filename);
         
-            $path = 'uploads/face_images/' . $filename;
+            $path = 'uploads/face_images/'.$filename;
         
             FaceImage::create([
                 'session_id' => $request->session_id,
