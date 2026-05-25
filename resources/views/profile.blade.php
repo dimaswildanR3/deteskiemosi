@@ -35,25 +35,21 @@
                     <label for="profile_photo"
                            style="cursor:pointer; position:relative; display:inline-block;">
 
-                        @if(Auth::user()->profile_photo)
-
-                            <img id="preview-image"
-                                 src="{{ asset(Auth::user()->profile_photo) }}"
-                                 class="rounded-circle shadow"
-                                 width="180"
-                                 height="180"
-                                 style="object-fit:cover; border:4px solid white;">
-
-                        @else
-
-                            <img id="preview-image"
+                           @if(!empty(Auth::user()->profile_photo))
+    <img id="preview-image"
+         src="{{ asset(Auth::user()->profile_photo) }}"
+         class="rounded-circle shadow"
+         width="180"
+         height="180"
+         style="object-fit:cover; border:4px solid white;">
+@else
+<img id="preview-image"
                                  src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}"
                                  class="rounded-circle shadow"
                                  width="180"
                                  height="180"
                                  style="object-fit:cover; border:4px solid white;">
-
-                        @endif
+@endif
 
                         <!-- ICON CAMERA -->
                         <div style="

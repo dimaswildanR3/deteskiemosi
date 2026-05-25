@@ -280,15 +280,16 @@
                     <li class="nav-item dropdown no-arrow">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ Auth::user()->name }}</span>
-                            @if(Auth::user()->profile_photo)
+                            @php
+    $photo = Auth::user()->profile_photo;
+@endphp
 
-    <img src="{{ asset(Auth::user()->profile_photo) }}"
+@if($photo && file_exists(public_path($photo)))
+    <img src="{{ asset($photo) }}"
          class="img-profile rounded-circle"
-         style="width: 40px;
-                height: 40px;
-                object-fit: cover;">
-
+         style="width: 40px; height: 40px; object-fit: cover;">
 @else
+
 
     <figure class="img-profile rounded-circle avatar font-weight-bold"
             data-initial="{{ Auth::user()->name[0] }}">

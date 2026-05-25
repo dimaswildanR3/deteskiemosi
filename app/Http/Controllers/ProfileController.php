@@ -40,10 +40,19 @@ class ProfileController extends Controller
          // UPLOAD FOTO
          if ($request->hasFile('profile_photo')) {
 
-            $path = $request->file('profile_photo')
-                ->store('profile', 'public');
+            $file = $request->file('profile_photo');
         
-            $user->profile_photo = 'storage/' . $path;
+            $filename = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+        
+            $destination = $_SERVER['DOCUMENT_ROOT'].'/uploads/profile';
+        
+            if (!file_exists($destination)) {
+                mkdir($destination, 0755, true);
+            }
+        
+            $file->move($destination, $filename);
+        
+            $user->profile_photo = 'uploads/profile/'.$filename;
         }
         // dd($request->file('profile_photo'));
         if (!is_null($request->input('current_password'))) {
