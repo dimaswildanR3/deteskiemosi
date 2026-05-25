@@ -7,6 +7,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\DetectionController;
+// use App\Http\Controllers\DetectionController;
+
+Route::get('/start-detection', [DetectionController::class, 'start']);
 /*
 |--------------------------------------------------------------------------
 | Web Routes
