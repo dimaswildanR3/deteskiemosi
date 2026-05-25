@@ -55,13 +55,21 @@ class SessionController extends Controller
         ]);
     
         if ($request->hasFile('image')) {
-            $filename = uniqid() . '.jpg';
 
-            $request->file('image')->move(
-                public_path('uploads/face_images'),
-                $filename
-            );
-            
+            $file = $request->file('image');
+        
+            $filename = uniqid() . '.jpg';
+        
+            $destination = public_path('uploads/face_images');
+        
+            // 🔥 INI YANG KAMU KURANG
+            if (!file_exists($destination)) {
+                mkdir($destination, 0755, true);
+            }
+        
+            // move file
+            $file->move($destination, $filename);
+        
             $path = 'uploads/face_images/' . $filename;
         
             FaceImage::create([
