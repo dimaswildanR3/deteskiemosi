@@ -121,16 +121,25 @@ class SessionController extends Controller
     
         $role = Auth::user()->role ?? '';
     
+        // target folder
+        $folder = $_SERVER['DOCUMENT_ROOT'].'/uploads/face_images';
+    
         // =========================
         // ADMIN = HAPUS SEMUA DATA
         // =========================
         if ($role == 'Admin') {
     
-            // Detection::truncate();
-            // Summary::truncate();
-            FaceImage::truncate();
-            // Session::truncate();
+            $images = FaceImage::all();
     
+            foreach ($images as $img) {
+                $filePath = $_SERVER['DOCUMENT_ROOT'].'/'.$img->file_path;
+    
+                if (file_exists($filePath)) {
+                    unlink($filePath); // 🔥 HAPUS FILE
+                }
+            }
+    
+            FaceImage::truncate();
         }
     
         // =========================
@@ -138,37 +147,30 @@ class SessionController extends Controller
         // =========================
         elseif ($role == 'Dosen') {
     
-            // ambil semua session milik dosen login
             $sessionIds = Session::where('user_id', Auth::id())
                 ->pluck('id');
     
-            // hapus child table dulu
-            // Detection::whereIn('session_id', $sessionIds)->delete();
+            $images = FaceImage::whereIn('session_id', $sessionIds)->get();
     
-            // Summary::whereIn('session_id', $sessionIds)->delete();
+            foreach ($images as $img) {
+                $filePath = $_SERVER['DOCUMENT_ROOT'].'/'.$img->file_path;
+    
+                if (file_exists($filePath)) {
+                    unlink($filePath); // 🔥 HAPUS FILE
+                }
+            }
     
             FaceImage::whereIn('session_id', $sessionIds)->delete();
-    
-            // hapus session
-            // Session::whereIn('id', $sessionIds)->delete();
         }
     
-        // =========================
-        // ROLE LAIN DITOLAK
-        // =========================
         else {
-    
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-    
             abort(403, 'Akses ditolak');
         }
     
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     
-        return redirect()->back()->with(
-            'success',
-            'Data berhasil dihapus'
-        );
+        return redirect()->back()->with('success', 'Data + file berhasil dihapus');
     }
 
     public function report()
