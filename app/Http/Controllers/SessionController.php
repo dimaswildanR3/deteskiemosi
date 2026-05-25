@@ -55,7 +55,14 @@ class SessionController extends Controller
         ]);
     
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('face_images', 'public');
+            $filename = uniqid() . '.jpg';
+
+            $request->file('image')->move(
+                public_path('uploads/face_images'),
+                $filename
+            );
+            
+            $path = 'uploads/face_images/' . $filename;
         
             FaceImage::create([
                 'session_id' => $request->session_id,

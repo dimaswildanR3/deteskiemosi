@@ -177,7 +177,7 @@
 
                 @foreach ($widget['latest_faces'] as $face)
 <div class="col-md-4 mb-3">
-   <img src="{{ asset('storage/' . $face->file_path) }}"
+<img src="{{ asset($face->file_path) }}"
      class="img-fluid rounded shadow-sm mb-2">
 
     <p class="mb-1 font-weight-bold">
