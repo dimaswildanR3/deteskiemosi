@@ -13,9 +13,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const API = "/api";
 
-    // =========================
-    // START DETEKSI
-    // =========================
+
+
+
     btnMulai?.addEventListener("click", async function (e) {
         e.preventDefault();
 
@@ -67,9 +67,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // =========================
-    // STORE LOOP
-    // =========================
+
+
+
     function startStoreLoop() {
 
         const canvas = document.createElement("canvas");
@@ -120,9 +120,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 2000);
     }
 
-    // =========================
-    // STOP DETEKSI (FIXED + SAFE)
-    // =========================
+
+
+
     btnDashboard?.addEventListener("click", async function (e) {
 
         if (!isDetecting) return;
@@ -169,9 +169,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // =========================
-    // UI
-    // =========================
+
+
+
     function setRunning() {
         if (!btnDashboard) return;
 
