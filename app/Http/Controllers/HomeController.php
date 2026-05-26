@@ -41,117 +41,94 @@ class HomeController extends Controller
      * Dashboard
      */
     public function index()
-    {
-        $user = Auth::user();
-    
-        // =========================
-        // CLASS FILTER
-        // =========================
-        if ($user->role == 'Dosen') {
-    
-            $classes = ClassModel::where('dosen_id', $user->id)->get();
-    
-            $sessionQuery = Session::where('user_id', $user->id);
-    
-            $detectionQuery = Detection::whereHas('session', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-    
-            $summaryQuery = Summary::whereHas('session', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-    
-            $faceQuery = FaceImage::whereHas('session', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-    
-        } else {
-    
-            $classes = ClassModel::all();
-    
-            $sessionQuery = Session::query();
-            $detectionQuery = Detection::query();
-            $summaryQuery = Summary::query();
-            $faceQuery = FaceImage::query();
-        }
-    
-        // =========================
-        // SESSION TERAKHIR
-        // =========================
-        $session = (clone $sessionQuery)->latest()->first();
-    
-        // =========================
-        // TOTAL CAPTURES
-        // =========================
-        $monitoring = (clone $detectionQuery)->count();
-    
-        // =========================
-        // SUMMARY RATE
-        // =========================
-        $summary = (clone $summaryQuery)->latest()->first();
-    
-        $positive = $summary->total_positif ?? 0;
-        $negative = $summary->total_negatif ?? 0;
-    
-        $total = $positive + $negative;
-    
-        $positive_rate = $total ? round(($positive / $total) * 100, 2) : 0;
-        $negative_rate = $total ? round(($negative / $total) * 100, 2) : 0;
-    
-        // =========================
-        // TIMELINE (FROM DETECTION)
-        // =========================
-        $timeline = (clone $detectionQuery)
-            ->orderBy('timestamp', 'asc')
-            ->limit(20)
-            ->get();
-    
-        $timeline_labels = $timeline->map(function ($item) {
-            return $item->timestamp
-                ? \Carbon\Carbon::parse($item->timestamp)->format('H:i:s')
-                : ($item->created_at ? $item->created_at->format('H:i:s') : '00:00:00');
-        });
-    
-        $timeline_values = $timeline->map(function ($item) {
-            return $item->label == 'POSITIF' ? 1 : -1;
-        });
-    
-        // =========================
-        // FACE IMAGE (3 TERBARU)
-        // =========================
-        $latest_faces = (clone $faceQuery)
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
-    
-        // =========================
-        // WIDGET
-        // =========================
-        $widget = [
-            'users' => ($user->role == 'Admin') ? User::count() : 0,
-            'classes' => $classes->count(),
-    
-            'monitoring' => $monitoring,
-    
-            'positive_rate' => $positive_rate,
-            'negative_rate' => $negative_rate,
-    
-            // FIX BIAR BLADE AMAN
-            'avg_sentiment' => ($positive_rate - $negative_rate),
-    
-            'timeline_labels' => $timeline_labels,
-            'timeline_values' => $timeline_values,
-    
-            // 🔥 FACE IMAGE
-            'latest_faces' => $latest_faces,
-        ];
-    
-        return view('home', compact('widget', 'classes'));
-    }
+{
+    $user = Auth::user();
+    $today = Carbon::today();
+    if (!session()->has('dashboard_loaded')) {
 
-    /**
-     * Detail Monitoring YOLO
-     */
+        session(['dashboard_loaded' => true]);
+
+        $classes = ($user->role == 'Dosen')
+            ? ClassModel::where('dosen_id', $user->id)->get()
+            : ClassModel::all();
+
+        return view('home', [
+            'widget' => [
+                'users' => ($user->role == 'Admin') ? User::count() : 0,
+                'classes' => 0,
+                'monitoring' => 0,
+                'positive_rate' => 0,
+                'negative_rate' => 0,
+                'avg_sentiment' => 0,
+                'timeline_labels' => [],
+                'timeline_values' => [],
+                'latest_faces' => [],
+            ],
+            'classes' => $classes
+        ]);
+    }
+    $classes = ($user->role == 'Dosen')
+        ? ClassModel::where('dosen_id', $user->id)->get()
+        : ClassModel::all();
+
+    $sessionIds = Session::where('dosen', $user->id)
+        ->whereDate('created_at', $today)
+        ->pluck('id');
+
+    $sessionQuery = Session::whereIn('id', $sessionIds);
+    $detectionQuery = Detection::whereIn('session_id', $sessionIds);
+    $summaryQuery = Summary::whereIn('session_id', $sessionIds);
+    $faceQuery = FaceImage::whereIn('session_id', $sessionIds);
+
+    $session = (clone $sessionQuery)->latest()->first();
+
+    $monitoring = (clone $detectionQuery)->count();
+
+    $summary = (clone $summaryQuery)->latest()->first();
+
+    $positive = $summary->total_positif ?? 0;
+    $negative = $summary->total_negatif ?? 0;
+
+    $total = $positive + $negative;
+
+    $positive_rate = $total ? round(($positive / $total) * 100, 2) : 0;
+    $negative_rate = $total ? round(($negative / $total) * 100, 2) : 0;
+
+    $timeline = (clone $detectionQuery)
+        ->orderBy('timestamp', 'asc')
+        ->limit(20)
+        ->get();
+
+    $timeline_labels = $timeline->map(function ($item) {
+        return $item->timestamp
+            ? Carbon::parse($item->timestamp)->format('H:i:s')
+            : ($item->created_at ? $item->created_at->format('H:i:s') : '00:00:00');
+    });
+
+    $timeline_values = $timeline->map(function ($item) {
+        return $item->label === 'POSITIF' ? 1 : -1;
+    });
+
+    $latest_faces = (clone $faceQuery)
+        ->orderBy('created_at', 'desc')
+        ->limit(3)
+        ->get();
+
+    $widget = [
+        'users' => ($user->role == 'Admin') ? User::count() : 0,
+        'classes' => $classes->count(),
+        'monitoring' => $monitoring,
+        'positive_rate' => $positive_rate,
+        'negative_rate' => $negative_rate,
+        'avg_sentiment' => ($positive_rate - $negative_rate),
+        'timeline_labels' => $timeline_labels,
+        'timeline_values' => $timeline_values,
+        'latest_faces' => $latest_faces,
+    ];
+
+    return view('home', compact('widget', 'classes'));
+}
+
     public function view($id)
     {
         // =========================
