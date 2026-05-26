@@ -200,7 +200,12 @@
 
 
 {{-- MODAL DETEKSI --}}
-<div class="modal fade" id="modalDeteksi" tabindex="-1" aria-hidden="true">
+<div class="modal fade"
+     id="modalDeteksi"
+     tabindex="-1"
+     aria-hidden="true"
+     data-backdrop="static"
+     data-keyboard="false">
 
     <div class="modal-dialog modal-dialog-centered modal-md">
 
@@ -277,7 +282,12 @@
                     </div>
                     <div class="text-center mb-4">
 
-                    <video id="previewKamera" autoplay playsinline muted style="display: none;"></video>
+                    <video id="previewKamera"
+       autoplay
+       playsinline
+       muted
+       style="width: 100%; border-radius: 12px;">
+</video>
 </div>
                     {{-- SELECT --}}
                     <div class="form-group">
@@ -367,8 +377,6 @@
             </div>
 
         </form>
-
-    </div>
 
 </div>
 @endsection
@@ -462,4 +470,5 @@ document.addEventListener("DOMContentLoaded", function () {
     
 </script>
 <script src="https://deteksiemosi.com/js/detection.js"></script>
+<!-- <script src="{{ asset('js/detection.js') }}"></script> -->
 <!-- <script defer src="https://unpkg.com/face-api.js"></script> -->

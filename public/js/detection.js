@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    const btnDashboard = document.getElementById("btnDashboardDeteksi");
     const btnMulai = document.getElementById("btnMulaiDeteksi");
     const form = document.querySelector("#modalDeteksi form");
     const video = document.getElementById("previewKamera");
@@ -13,23 +12,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const API = "/api";
 
-
-
-
+    // =========================
+    // TOGGLE START / STOP
+    // =========================
     btnMulai?.addEventListener("click", async function (e) {
         e.preventDefault();
 
-        try {
+        if (isDetecting) {
+            await stopDetection();
+            return;
+        }
 
+        try {
             cameraStream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: false
             });
 
-            if (video) {
-                video.srcObject = cameraStream;
-                await video.play();
-            }
+            video.srcObject = cameraStream;
+            await video.play();
 
             const res = await fetch(`${API}/session/start`, {
                 method: "POST",
@@ -51,99 +52,41 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             sessionId = data.session_id;
-
             isDetecting = true;
-
-            $("#modalDeteksi").modal("hide");
 
             setRunning();
             startStoreLoop();
 
-            console.log("SESSION STARTED:", sessionId);
-
         } catch (err) {
-            console.error("START ERROR:", err);
+            console.error(err);
             alert(err.message);
         }
     });
 
-
-
-
-    function startStoreLoop() {
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        intervalLoop = setInterval(async () => {
-
-            if (!isDetecting || !video || !video.videoWidth) return;
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, "image/jpeg", 0.8);
-            });
-
-            const label = Math.random() > 0.5 ? "POSITIF" : "NEGATIF";
-            const confidence = (Math.random() * 0.4 + 0.6).toFixed(2);
-
-            const formData = new FormData();
-            formData.append("session_id", sessionId);
-            formData.append("nomor_mahasiswa", studentCounter);
-            formData.append("label", label);
-            formData.append("confidence", confidence);
-            formData.append("image", blob, "capture.jpg");
-
-            fetch(`${API}/store`, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "Accept": "application/json"
-                }
-            })
-            .then(res => res.text())
-            .then(text => {
-                try {
-                    console.log("STORE OK:", JSON.parse(text));
-                } catch {
-                    console.warn("STORE NON-JSON:", text);
-                }
-            })
-            .catch(err => console.error("STORE ERROR:", err));
-
-            studentCounter++;
-
-        }, 2000);
-    }
-
-
-
-
-    btnDashboard?.addEventListener("click", async function (e) {
+    // =========================
+    // STOP DETECTION
+    // =========================
+    async function stopDetection() {
 
         if (!isDetecting) return;
 
-        e.preventDefault();
+        isDetecting = false;
 
+        // stop camera
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+        }
+
+        // stop loop
+        if (intervalLoop) {
+            clearInterval(intervalLoop);
+            intervalLoop = null;
+        }
+
+        // stop API
         try {
-
-            isDetecting = false;
-
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = null;
-            }
-
-            if (intervalLoop) {
-                clearInterval(intervalLoop);
-                intervalLoop = null;
-            }
-
-            const res = await fetch(`${API}/session/stop`, {
+            await fetch(`${API}/session/stop`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -153,39 +96,77 @@ document.addEventListener("DOMContentLoaded", function () {
                     session_id: sessionId
                 })
             });
+        } catch (e) {}
 
-            const text = await res.text();
+        // close modal
+        $("#modalDeteksi").modal("hide");
 
-            try {
-                console.log("SESSION STOP:", JSON.parse(text));
-            } catch {
-                console.warn("STOP NON-JSON:", text);
-            }
-
-            setIdle();
-
-        } catch (err) {
-            console.error("STOP ERROR:", err);
-        }
-    });
-
-
-
-
-    function setRunning() {
-        if (!btnDashboard) return;
-
-        btnDashboard.innerHTML = `<i class="fas fa-stop-circle"></i> Stop Deteksi`;
-        btnDashboard.classList.remove("btn-success");
-        btnDashboard.classList.add("btn-danger");
+        setIdle();
     }
 
-    function setIdle() {
-        if (!btnDashboard) return;
+    // =========================
+    // CAPTURE LOOP
+    // =========================
+    function startStoreLoop() {
 
-        btnDashboard.innerHTML = `<i class="fas fa-camera"></i> Deteksi Kamera`;
-        btnDashboard.classList.remove("btn-danger");
-        btnDashboard.classList.add("btn-success");
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        intervalLoop = setInterval(async () => {
+
+            if (!isDetecting || !video.videoWidth) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            ctx.drawImage(video, 0, 0);
+
+            const blob = await new Promise(resolve =>
+                canvas.toBlob(resolve, "image/jpeg", 0.8)
+            );
+
+            const formData = new FormData();
+            formData.append("session_id", sessionId);
+            formData.append("nomor_mahasiswa", studentCounter++);
+            formData.append("label", Math.random() > 0.5 ? "POSITIF" : "NEGATIF");
+            formData.append("confidence", (Math.random() * 0.4 + 0.6).toFixed(2));
+            formData.append("image", blob, "capture.jpg");
+
+            fetch(`${API}/store`, {
+                method: "POST",
+                body: formData,
+                headers: { "Accept": "application/json" }
+            });
+
+        }, 2000);
+    }
+
+    // =========================
+    // UI STATE (FIX WARNA 100%)
+    // =========================
+
+    function setRunning() {
+        if (!btnMulai) return;
+    
+        btnMulai.innerHTML = `<i class="fas fa-stop-circle"></i> Stop Deteksi`;
+    
+        btnMulai.style.background = "#dc3545"; // merah bootstrap
+        btnMulai.style.border = "none";
+        btnMulai.style.color = "#fff";
+    
+        btnMulai.className = "btn shadow";
+    }
+    
+    function setIdle() {
+        if (!btnMulai) return;
+    
+        btnMulai.innerHTML = `<i class="fas fa-play-circle"></i> Mulai Deteksi`;
+    
+        btnMulai.style.background = "#28a745"; // hijau bootstrap
+        btnMulai.style.border = "none";
+        btnMulai.style.color = "#fff";
+    
+        btnMulai.className = "btn shadow";
     }
 
 });
