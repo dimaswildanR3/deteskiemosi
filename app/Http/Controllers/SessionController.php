@@ -74,7 +74,7 @@ class SessionController extends Controller
             $path = 'uploads/face_images/'.$filename;
         
             FaceImage::create([
-                'session_id' => $request->session_id,
+                'session_id' => $sessionId,
                 'nomor_mahasiswa' => $request->nomor_mahasiswa,
                 'label' => $request->label,
                 'file_path' => $path
@@ -83,7 +83,7 @@ class SessionController extends Controller
     
         // 3. ambil summary
         $summary = Summary::firstOrCreate(
-            ['session_id' => $request->session_id],
+            ['session_id' => $sessionId],
             [
                 'total_positif' => 0,
                 'total_negatif' => 0,
