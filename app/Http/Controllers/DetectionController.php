@@ -38,21 +38,21 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | PATH PYTHON
+            | PATH PYTHON SERVER CPANEL
             |--------------------------------------------------------------------------
             */
     
             $pythonEnv =
-                '/Users/dimaswildanalfurqaan/Documents/untitled folder 2/Laravel---SB-Admin-2---Fortify/python/venv/bin/python';
+                '/home/deteksie/virtualenv/repositories/deteskiemosi/python/3.11/bin/python';
     
             /*
             |--------------------------------------------------------------------------
-            | FILE ivcam_tester.py
+            | FILE PYTHON
             |--------------------------------------------------------------------------
             */
     
             $scriptPython =
-                '/Users/dimaswildanalfurqaan/Documents/untitled folder 2/Laravel---SB-Admin-2---Fortify/python/ivcam_tester.py';
+                '/home/deteksie/repositories/deteskiemosi/python/ivcam_tester.py';
     
             /*
             |--------------------------------------------------------------------------
@@ -61,11 +61,11 @@ class DetectionController extends Controller
             */
     
             $dirPython =
-                '/Users/dimaswildanalfurqaan/Documents/untitled folder 2/Laravel---SB-Admin-2---Fortify/python';
+                '/home/deteksie/repositories/deteskiemosi/python';
     
             /*
             |--------------------------------------------------------------------------
-            | VALIDASI
+            | VALIDASI PYTHON
             |--------------------------------------------------------------------------
             */
     
@@ -73,21 +73,55 @@ class DetectionController extends Controller
     
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Python tidak ditemukan'
-                ]);
-            }
-    
-            if (!file_exists($scriptPython)) {
-    
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ivcam_tester.py tidak ditemukan'
+                    'message' => 'Python environment tidak ditemukan',
+                    'path' => $pythonEnv
                 ]);
             }
     
             /*
             |--------------------------------------------------------------------------
-            | COMMAND
+            | VALIDASI SCRIPT
+            |--------------------------------------------------------------------------
+            */
+    
+            if (!file_exists($scriptPython)) {
+    
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'ivcam_tester.py tidak ditemukan',
+                    'path' => $scriptPython
+                ]);
+            }
+    
+            /*
+            |--------------------------------------------------------------------------
+            | VALIDASI FILE IMAGE
+            |--------------------------------------------------------------------------
+            */
+    
+            if (!$request->hasFile('image')) {
+    
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'File image tidak ditemukan'
+                ]);
+            }
+    
+            /*
+            |--------------------------------------------------------------------------
+            | SIMPAN TEMP IMAGE
+            |--------------------------------------------------------------------------
+            */
+    
+            $file = $request->file('image');
+    
+            $tempPath = $file->store('temp_frames', 'local');
+    
+            $fullPathImage = storage_path('app/' . $tempPath);
+    
+            /*
+            |--------------------------------------------------------------------------
+            | COMMAND PYTHON
             |--------------------------------------------------------------------------
             */
     
@@ -97,9 +131,11 @@ class DetectionController extends Controller
                 escapeshellarg($pythonEnv) .
                 ' ' .
                 escapeshellarg($scriptPython) .
+                ' ' .
+                escapeshellarg($fullPathImage) .
                 ' 2>&1';
     
-            Log::info("COMMAND PYTHON", [
+            Log::info('COMMAND PYTHON', [
                 'command' => $command
             ]);
     
@@ -111,9 +147,20 @@ class DetectionController extends Controller
     
             $output = shell_exec($command);
     
-            Log::info("OUTPUT PYTHON", [
+            Log::info('OUTPUT PYTHON', [
                 'output' => $output
             ]);
+    
+            /*
+            |--------------------------------------------------------------------------
+            | HAPUS TEMP IMAGE
+            |--------------------------------------------------------------------------
+            */
+    
+            if (file_exists($fullPathImage)) {
+    
+                unlink($fullPathImage);
+            }
     
             /*
             |--------------------------------------------------------------------------
@@ -131,9 +178,11 @@ class DetectionController extends Controller
     
         } catch (\Throwable $e) {
     
-            Log::error("ERROR PYTHON", [
+            Log::error('ERROR PYTHON', [
     
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
     
             ]);
     
