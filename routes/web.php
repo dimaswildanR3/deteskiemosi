@@ -24,6 +24,10 @@ Route::get('/', function () {
 });
 
 
+
+Route::get('/kamera', [DetectionController::class, 'index']);
+Route::post('/deteksi', [DetectionController::class, 'prosesDeteksi'])->name('deteksi.proses');
+
 Route::post('/start-detection', [DetectionController::class, 'start'])
     ->name('start.detection');
 
