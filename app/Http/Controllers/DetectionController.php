@@ -38,7 +38,21 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | PATH PYTHON SERVER CPANEL
+            | VALIDASI IMAGE
+            |--------------------------------------------------------------------------
+            */
+    
+            if (!$request->hasFile('image')) {
+    
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Image tidak ditemukan'
+                ], 400);
+            }
+    
+            /*
+            |--------------------------------------------------------------------------
+            | PYTHON ENV SERVER
             |--------------------------------------------------------------------------
             */
     
@@ -47,7 +61,7 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | FILE PYTHON
+            | PYTHON SCRIPT
             |--------------------------------------------------------------------------
             */
     
@@ -65,7 +79,7 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | VALIDASI PYTHON
+            | VALIDASI PYTHON ENV
             |--------------------------------------------------------------------------
             */
     
@@ -75,7 +89,7 @@ class DetectionController extends Controller
                     'status' => 'error',
                     'message' => 'Python environment tidak ditemukan',
                     'path' => $pythonEnv
-                ]);
+                ], 500);
             }
     
             /*
@@ -90,34 +104,29 @@ class DetectionController extends Controller
                     'status' => 'error',
                     'message' => 'ivcam_tester.py tidak ditemukan',
                     'path' => $scriptPython
-                ]);
+                ], 500);
             }
     
             /*
             |--------------------------------------------------------------------------
-            | VALIDASI FILE IMAGE
-            |--------------------------------------------------------------------------
-            */
-    
-            if (!$request->hasFile('image')) {
-    
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'File image tidak ditemukan'
-                ]);
-            }
-    
-            /*
-            |--------------------------------------------------------------------------
-            | SIMPAN TEMP IMAGE
+            | SIMPAN IMAGE TEMPORARY
             |--------------------------------------------------------------------------
             */
     
             $file = $request->file('image');
     
-            $tempPath = $file->store('temp_frames', 'local');
+            $tempPath = $file->store(
+                'temp_frames',
+                'local'
+            );
     
-            $fullPathImage = storage_path('app/' . $tempPath);
+            $fullPathImage = storage_path(
+                'app/' . $tempPath
+            );
+    
+            Log::info('IMAGE TEMP', [
+                'path' => $fullPathImage
+            ]);
     
             /*
             |--------------------------------------------------------------------------
@@ -126,7 +135,8 @@ class DetectionController extends Controller
             */
     
             $command =
-                'cd ' . escapeshellarg($dirPython) .
+                'cd ' .
+                escapeshellarg($dirPython) .
                 ' && ' .
                 escapeshellarg($pythonEnv) .
                 ' ' .
@@ -153,7 +163,7 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | HAPUS TEMP IMAGE
+            | HAPUS IMAGE TEMP
             |--------------------------------------------------------------------------
             */
     
@@ -164,7 +174,21 @@ class DetectionController extends Controller
     
             /*
             |--------------------------------------------------------------------------
-            | RESPONSE
+            | VALIDASI OUTPUT PYTHON
+            |--------------------------------------------------------------------------
+            */
+    
+            if (!$output) {
+    
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Python tidak mengembalikan output'
+                ], 500);
+            }
+    
+            /*
+            |--------------------------------------------------------------------------
+            | RESPONSE SUCCESS
             |--------------------------------------------------------------------------
             */
     
@@ -178,10 +202,12 @@ class DetectionController extends Controller
     
         } catch (\Throwable $e) {
     
-            Log::error('ERROR PYTHON', [
+            Log::error('ERROR DETEKSI', [
     
                 'message' => $e->getMessage(),
+    
                 'line' => $e->getLine(),
+    
                 'file' => $e->getFile()
     
             ]);

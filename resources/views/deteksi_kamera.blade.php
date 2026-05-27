@@ -3,8 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Kamera Laravel + Python</title>
+
+    <title>Deteksi Emosi Laravel + Python</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
@@ -13,37 +15,66 @@
 
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
 
-    <div class="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-xl">
+    <div class="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-2xl">
 
         <h1 class="text-3xl font-bold text-slate-800 mb-2">
-            Test Kamera Laravel + Python
+            Deteksi Emosi
         </h1>
 
         <p class="text-slate-500 mb-6">
-            Menjalankan <b>cek_kamera.py</b> dari Laravel
+            Laravel + Python + OpenCV + YOLO
         </p>
 
-        <button
-            id="btn-test"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition"
-        >
-            Jalankan Python Kamera
-        </button>
+        <!-- VIDEO -->
+        <div class="overflow-hidden rounded-2xl border border-slate-300 bg-black">
 
+            <video
+                id="video"
+                autoplay
+                playsinline
+                class="w-full h-auto"
+            ></video>
+
+        </div>
+
+        <!-- BUTTON -->
+        <div class="mt-6 flex gap-3">
+
+            <button
+                id="btn-start"
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold"
+            >
+                Aktifkan Kamera
+            </button>
+
+            <button
+                id="btn-detect"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold"
+            >
+                Kirim ke Python
+            </button>
+
+        </div>
+
+        <!-- STATUS -->
         <div class="mt-6">
-
-            <p class="font-semibold text-slate-700 mb-2">
-                Status:
-            </p>
 
             <div
                 id="status"
-                class="bg-slate-100 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-wrap"
+                class="bg-slate-100 border border-slate-200 rounded-xl p-4 text-sm whitespace-pre-wrap"
             >
-                Belum dijalankan...
+                Menunggu...
             </div>
 
         </div>
+
+        <!-- CANVAS HIDDEN -->
+        <canvas
+            id="canvas"
+            width="640"
+            height="480"
+            class="hidden"
+        ></canvas>
 
     </div>
 
@@ -55,75 +86,177 @@
         |--------------------------------------------------------------------------
         */
 
-        const btnTest = document.getElementById('btn-test');
+        const video =
+            document.getElementById('video');
 
-        const statusBox = document.getElementById('status');
+        const canvas =
+            document.getElementById('canvas');
+
+        const statusBox =
+            document.getElementById('status');
+
+        const btnStart =
+            document.getElementById('btn-start');
+
+        const btnDetect =
+            document.getElementById('btn-detect');
+
+        const ctx =
+            canvas.getContext('2d');
 
         /*
         |--------------------------------------------------------------------------
-        | URL CONTROLLER
+        | ROUTE
         |--------------------------------------------------------------------------
         */
 
-        const SERVER_URL = "{{ route('deteksi.proses') }}";
+        const SERVER_URL =
+            "{{ route('deteksi.proses') }}";
 
         /*
         |--------------------------------------------------------------------------
-        | BUTTON CLICK
+        | START CAMERA
         |--------------------------------------------------------------------------
         */
 
-        btnTest.addEventListener('click', async () => {
+        btnStart.addEventListener(
+            'click',
+            async () => {
 
-            statusBox.innerHTML = 'Menjalankan Python...';
+                try {
 
-            btnTest.disabled = true;
+                    const stream =
+                        await navigator.mediaDevices.getUserMedia({
 
-            try {
+                            video: true
 
-                const formData = new FormData();
+                        });
 
-                formData.append(
-                    '_token',
-                    document.querySelector('meta[name="csrf-token"]').content
-                );
-
-                const response = await fetch(SERVER_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                console.log(data);
-
-                if (data.status === 'success') {
+                    video.srcObject = stream;
 
                     statusBox.innerHTML =
-                        'PYTHON BERHASIL DIJALANKAN\n\n' +
-                        data.output_python;
+                        '✅ Kamera berhasil aktif';
 
-                } else {
+                } catch (err) {
+
+                    console.error(err);
 
                     statusBox.innerHTML =
-                        'ERROR\n\n' +
-                        data.message;
+                        '❌ Gagal membuka kamera';
                 }
 
-            } catch (error) {
-
-                console.error(error);
-
-                statusBox.innerHTML =
-                    'ERROR FETCH\n\n' +
-                    error.message;
-
-            } finally {
-
-                btnTest.disabled = false;
             }
+        );
 
-        });
+        /*
+        |--------------------------------------------------------------------------
+        | DETEKSI
+        |--------------------------------------------------------------------------
+        */
+
+        btnDetect.addEventListener(
+            'click',
+            async () => {
+
+                try {
+
+                    statusBox.innerHTML =
+                        '⏳ Mengirim gambar ke Python...';
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | CAPTURE FRAME
+                    |--------------------------------------------------------------------------
+                    */
+
+                    ctx.drawImage(
+                        video,
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    );
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | CANVAS TO BLOB
+                    |--------------------------------------------------------------------------
+                    */
+
+                    canvas.toBlob(
+                        async (blob) => {
+
+                            const formData =
+                                new FormData();
+
+                            formData.append(
+                                'image',
+                                blob,
+                                'frame.jpg'
+                            );
+
+                            formData.append(
+                                '_token',
+                                document.querySelector(
+                                    'meta[name="csrf-token"]'
+                                ).content
+                            );
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | FETCH
+                            |--------------------------------------------------------------------------
+                            */
+
+                            const response =
+                                await fetch(
+                                    SERVER_URL,
+                                    {
+                                        method: 'POST',
+                                        body: formData
+                                    }
+                                );
+
+                            const data =
+                                await response.json();
+
+                            console.log(data);
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | RESULT
+                            |--------------------------------------------------------------------------
+                            */
+
+                            if (data.status === 'success') {
+
+                                statusBox.innerHTML =
+                                    '✅ HASIL DETEKSI\n\n' +
+                                    data.output_python;
+
+                            } else {
+
+                                statusBox.innerHTML =
+                                    '❌ ERROR\n\n' +
+                                    data.message;
+                            }
+
+                        },
+                        'image/jpeg',
+                        0.8
+                    );
+
+                } catch (err) {
+
+                    console.error(err);
+
+                    statusBox.innerHTML =
+                        '❌ ERROR FETCH\n\n' +
+                        err.message;
+                }
+
+            }
+        );
 
     </script>
 
