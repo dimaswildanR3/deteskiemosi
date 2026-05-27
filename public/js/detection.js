@@ -4,39 +4,67 @@ document.addEventListener("DOMContentLoaded", function () {
     const form = document.querySelector("#modalDeteksi form");
     const video = document.getElementById("previewKamera");
 
-    let cameraStream = null;
-    let isDetecting = false;
+    let stream = null;
+    let isRunning = false;
     let sessionId = null;
-    let intervalLoop = null;
-    let studentCounter = 1;
+
+    let canvas = null;
+    let ctx = null;
+
+    let smoothMap = {};
+    let lastUpdate = 0;
 
     const API = "/api";
 
     // =========================
-    // TOGGLE START / STOP
+    // LOAD MODEL
+    // =========================
+    async function loadModels() {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+        await faceapi.nets.faceExpressionNet.loadFromUri('/models');
+        console.log("Model loaded");
+    }
+
+    loadModels();
+
+    // =========================
+    // EMA SMOOTH
+    // =========================
+    function ema(id, value) {
+        if (smoothMap[id] === undefined) {
+            smoothMap[id] = value;
+        }
+        smoothMap[id] = (smoothMap[id] * 0.8) + (value * 0.2);
+        return smoothMap[id];
+    }
+
+    // =========================
+    // START / STOP
     // =========================
     btnMulai?.addEventListener("click", async function (e) {
         e.preventDefault();
 
-        if (isDetecting) {
+        if (isRunning) {
             await stopDetection();
             return;
         }
 
         try {
-            cameraStream = await navigator.mediaDevices.getUserMedia({
+            // CAMERA START
+            stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: false
             });
 
-            video.srcObject = cameraStream;
+            video.srcObject = stream;
             await video.play();
 
+            // SESSION START
             const res = await fetch(`${API}/session/start`, {
                 method: "POST",
                 headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
                 },
                 body: JSON.stringify({
                     nama_kelas: form?.querySelector("[name=kelas]")?.value,
@@ -52,10 +80,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             sessionId = data.session_id;
-            isDetecting = true;
+            isRunning = true;
 
             setRunning();
-            startStoreLoop();
+            startDetectLoop();
 
         } catch (err) {
             console.error(err);
@@ -64,27 +92,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =========================
-    // STOP DETECTION
+    // STOP
     // =========================
     async function stopDetection() {
 
-        if (!isDetecting) return;
+        isRunning = false;
 
-        isDetecting = false;
-
-        // stop camera
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(t => t.stop());
-            cameraStream = null;
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
         }
 
-        // stop loop
-        if (intervalLoop) {
-            clearInterval(intervalLoop);
-            intervalLoop = null;
-        }
+        if (canvas) canvas.remove();
 
-        // stop API
         try {
             await fetch(`${API}/session/stop`, {
                 method: "POST",
@@ -98,75 +118,107 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         } catch (e) {}
 
-        // close modal
-        $("#modalDeteksi").modal("hide");
-
+        sessionId = null;
         setIdle();
     }
 
     // =========================
-    // CAPTURE LOOP
+    // DETECTION ONLY (NO STORE)
     // =========================
-    function startStoreLoop() {
+    function startDetectLoop() {
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const old = document.getElementById("overlayCanvas");
+        if (old) old.remove();
 
-        intervalLoop = setInterval(async () => {
+        canvas = document.createElement("canvas");
+        canvas.id = "overlayCanvas";
+        ctx = canvas.getContext("2d");
 
-            if (!isDetecting || !video.videoWidth) return;
+        video.parentNode.style.position = "relative";
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+        canvas.style.position = "absolute";
+        canvas.style.top = "0";
+        canvas.style.left = "0";
+        canvas.style.zIndex = "10";
+        canvas.style.pointerEvents = "none";
 
-            ctx.drawImage(video, 0, 0);
+        video.parentNode.appendChild(canvas);
 
-            const blob = await new Promise(resolve =>
-                canvas.toBlob(resolve, "image/jpeg", 0.8)
-            );
+        const displaySize = {
+            width: video.clientWidth,
+            height: video.clientHeight
+        };
 
-            const formData = new FormData();
-            formData.append("session_id", sessionId);
-            formData.append("nomor_mahasiswa", studentCounter++);
-            formData.append("label", Math.random() > 0.5 ? "POSITIF" : "NEGATIF");
-            formData.append("confidence", (Math.random() * 0.4 + 0.6).toFixed(2));
-            formData.append("image", blob, "capture.jpg");
+        faceapi.matchDimensions(canvas, displaySize);
 
-            fetch(`${API}/store`, {
-                method: "POST",
-                body: formData,
-                headers: { "Accept": "application/json" }
+        async function loop() {
+
+            if (!isRunning) return;
+
+            requestAnimationFrame(loop);
+
+            const now = Date.now();
+            if (now - lastUpdate < 500) return;
+            lastUpdate = now;
+
+            if (video.readyState < 2) return;
+
+            canvas.width = displaySize.width;
+            canvas.height = displaySize.height;
+
+            const detections = await faceapi
+                .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 224,
+                    scoreThreshold: 0.5
+                }))
+                .withFaceExpressions();
+
+            const resized = faceapi.resizeResults(detections, displaySize);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            resized.forEach((res, i) => {
+
+                const box = res.detection.box;
+                const exp = res.expressions;
+
+                const happy = exp.happy || 0;
+                const angry = exp.angry || 0;
+
+                let raw = happy;
+                if (angry > happy) raw = 1 - angry;
+
+                const score = ema(i, raw);
+                const percent = Math.round(score * 100);
+
+                const isPositive = score >= 0.68;
+
+                const label = isPositive ? "POSITIF" : "NEGATIF";
+                const color = isPositive ? "lime" : "red";
+
+                new faceapi.draw.DrawBox(box, {
+                    label: `Mhs ${i + 1} ${label} (${percent}%)`,
+                    boxColor: color
+                }).draw(canvas);
             });
+        }
 
-        }, 2000);
+        loop();
     }
 
     // =========================
-    // UI STATE (FIX WARNA 100%)
+    // UI
     // =========================
-
     function setRunning() {
-        if (!btnMulai) return;
-    
-        btnMulai.innerHTML = `<i class="fas fa-stop-circle"></i> Stop Deteksi`;
-    
-        btnMulai.style.background = "#dc3545"; // merah bootstrap
-        btnMulai.style.border = "none";
+        btnMulai.innerHTML = "Stop Deteksi";
+        btnMulai.style.background = "#dc3545";
         btnMulai.style.color = "#fff";
-    
-        btnMulai.className = "btn shadow";
     }
-    
+
     function setIdle() {
-        if (!btnMulai) return;
-    
-        btnMulai.innerHTML = `<i class="fas fa-play-circle"></i> Mulai Deteksi`;
-    
-        btnMulai.style.background = "#28a745"; // hijau bootstrap
-        btnMulai.style.border = "none";
+        btnMulai.innerHTML = "Mulai Deteksi";
+        btnMulai.style.background = "#28a745";
         btnMulai.style.color = "#fff";
-    
-        btnMulai.className = "btn shadow";
     }
 
 });

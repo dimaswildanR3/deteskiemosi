@@ -45,9 +45,11 @@ class SessionController extends Controller
     */
     public function store(Request $request)
     {
+        $sessionId = Detection::latest()->value('session_id') ?? 1;
+
         // 1. simpan detection
         Detection::create([
-            'session_id' => $request->session_id,
+            'session_id' => $sessionId,
             'nomor_mahasiswa' => $request->nomor_mahasiswa,
             'label' => $request->label,
             'confidence' => $request->confidence,
