@@ -1,265 +1,152 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
+    <title>Deteksi Emosi</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-    <title>Deteksi Emosi Laravel + Python</title>
+    <style>
+        body{
+            margin:0;
+            background:#111;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+        }
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        .container{
+            position:relative;
+            width:720px;
+            height:560px;
+        }
 
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+        video, canvas{
+            position:absolute;
+            top:0;
+            left:0;
+            width:720px;
+            height:560px;
+            border-radius:12px;
+        }
+
+        video{
+            border:3px solid white;
+            object-fit:cover;
+        }
+
+        .status{
+            position:absolute;
+            top:10px;
+            left:10px;
+            z-index:10;
+            background:#000000cc;
+            color:white;
+            padding:8px 12px;
+            border-radius:8px;
+            font-size:14px;
+        }
+    </style>
 </head>
+<body>
 
-<body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
+<div class="container">
 
-    <div class="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-2xl">
+    <div class="status" id="status">Loading...</div>
 
-        <h1 class="text-3xl font-bold text-slate-800 mb-2">
-            Deteksi Emosi
-        </h1>
+    <video id="video" autoplay muted playsinline></video>
 
-        <p class="text-slate-500 mb-6">
-            Laravel + Python + OpenCV + YOLO
-        </p>
+</div>
 
-        <!-- VIDEO -->
-        <div class="overflow-hidden rounded-2xl border border-slate-300 bg-black">
+<script>
 
-            <video
-                id="video"
-                autoplay
-                playsinline
-                class="w-full h-auto"
-            ></video>
+const video = document.getElementById('video');
+const statusText = document.getElementById('status');
 
-        </div>
+async function start() {
 
-        <!-- BUTTON -->
-        <div class="mt-6 flex gap-3">
+    await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceExpressionNet.loadFromUri('/models')
+    ]);
 
-            <button
-                id="btn-start"
-                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold"
-            >
-                Aktifkan Kamera
-            </button>
+    statusText.innerHTML = 'Menyalakan kamera...';
 
-            <button
-                id="btn-detect"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold"
-            >
-                Kirim ke Python
-            </button>
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+    });
 
-        </div>
+    video.srcObject = stream;
+}
 
-        <!-- STATUS -->
-        <div class="mt-6">
+start();
 
-            <div
-                id="status"
-                class="bg-slate-100 border border-slate-200 rounded-xl p-4 text-sm whitespace-pre-wrap"
-            >
-                Menunggu...
-            </div>
+video.addEventListener('play', () => {
 
-        </div>
+    statusText.innerHTML = 'Deteksi aktif';
 
-        <!-- CANVAS HIDDEN -->
-        <canvas
-            id="canvas"
-            width="640"
-            height="480"
-            class="hidden"
-        ></canvas>
+    const canvas = faceapi.createCanvasFromMedia(video);
+    document.querySelector('.container').append(canvas);
 
-    </div>
+    const size = { width: 720, height: 560 };
+    faceapi.matchDimensions(canvas, size);
 
-    <script>
+    setInterval(async () => {
 
-        /*
-        |--------------------------------------------------------------------------
-        | ELEMENT
-        |--------------------------------------------------------------------------
-        */
+        const detections = await faceapi
+            .detectAllFaces(
+                video,
+                new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 416,
+                    scoreThreshold: 0.3
+                })
+            )
+            .withFaceExpressions();
 
-        const video =
-            document.getElementById('video');
+        const resized = faceapi.resizeResults(detections, size);
 
-        const canvas =
-            document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const statusBox =
-            document.getElementById('status');
+        resized.forEach(res => {
 
-        const btnStart =
-            document.getElementById('btn-start');
+            const box = res.detection.box;
+            const exp = res.expressions;
 
-        const btnDetect =
-            document.getElementById('btn-detect');
+            let label = '';
+            let color = '';
 
-        const ctx =
-            canvas.getContext('2d');
-
-        /*
-        |--------------------------------------------------------------------------
-        | ROUTE
-        |--------------------------------------------------------------------------
-        */
-
-        const SERVER_URL =
-            "{{ route('deteksi.proses') }}";
-
-        /*
-        |--------------------------------------------------------------------------
-        | START CAMERA
-        |--------------------------------------------------------------------------
-        */
-
-        btnStart.addEventListener(
-            'click',
-            async () => {
-
-                try {
-
-                    const stream =
-                        await navigator.mediaDevices.getUserMedia({
-
-                            video: true
-
-                        });
-
-                    video.srcObject = stream;
-
-                    statusBox.innerHTML =
-                        '✅ Kamera berhasil aktif';
-
-                } catch (err) {
-
-                    console.error(err);
-
-                    statusBox.innerHTML =
-                        '❌ Gagal membuka kamera';
-                }
-
+            // POSITIF = SENANG
+            if (exp.happy > 0.6) {
+                label = 'POSITIF 😊';
+                color = 'rgb(50,205,50)';
             }
-        );
 
-        /*
-        |--------------------------------------------------------------------------
-        | DETEKSI
-        |--------------------------------------------------------------------------
-        */
-
-        btnDetect.addEventListener(
-            'click',
-            async () => {
-
-                try {
-
-                    statusBox.innerHTML =
-                        '⏳ Mengirim gambar ke Python...';
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | CAPTURE FRAME
-                    |--------------------------------------------------------------------------
-                    */
-
-                    ctx.drawImage(
-                        video,
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    );
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | CANVAS TO BLOB
-                    |--------------------------------------------------------------------------
-                    */
-
-                    canvas.toBlob(
-                        async (blob) => {
-
-                            const formData =
-                                new FormData();
-
-                            formData.append(
-                                'image',
-                                blob,
-                                'frame.jpg'
-                            );
-
-                            formData.append(
-                                '_token',
-                                document.querySelector(
-                                    'meta[name="csrf-token"]'
-                                ).content
-                            );
-
-                            /*
-                            |--------------------------------------------------------------------------
-                            | FETCH
-                            |--------------------------------------------------------------------------
-                            */
-
-                            const response =
-                                await fetch(
-                                    SERVER_URL,
-                                    {
-                                        method: 'POST',
-                                        body: formData
-                                    }
-                                );
-
-                            const data =
-                                await response.json();
-
-                            console.log(data);
-
-                            /*
-                            |--------------------------------------------------------------------------
-                            | RESULT
-                            |--------------------------------------------------------------------------
-                            */
-
-                            if (data.status === 'success') {
-
-                                statusBox.innerHTML =
-                                    '✅ HASIL DETEKSI\n\n' +
-                                    data.output_python;
-
-                            } else {
-
-                                statusBox.innerHTML =
-                                    '❌ ERROR\n\n' +
-                                    data.message;
-                            }
-
-                        },
-                        'image/jpeg',
-                        0.8
-                    );
-
-                } catch (err) {
-
-                    console.error(err);
-
-                    statusBox.innerHTML =
-                        '❌ ERROR FETCH\n\n' +
-                        err.message;
-                }
-
+            // NEGATIF = MARAH
+            else if (exp.angry > 0.5) {
+                label = 'NEGATIF 😠';
+                color = 'rgb(255,0,0)';
             }
-        );
 
-    </script>
+            // kalau bukan 2 itu → skip (tidak ditampilkan)
+            else {
+                return;
+            }
+
+            new faceapi.draw.DrawBox(box, {
+                label: label,
+                boxColor: color
+            }).draw(canvas);
+
+        });
+
+    }, 100);
+
+});
+
+</script>
 
 </body>
-
 </html>
