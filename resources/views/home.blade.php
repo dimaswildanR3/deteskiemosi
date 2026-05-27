@@ -470,6 +470,6 @@ document.addEventListener("DOMContentLoaded", function () {
     
 </script>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-<!-- <script src="https://deteksiemosi.com/js/detection.js"></script> -->
-<script src="{{ asset('js/detection.js') }}"></script>
+<script src="https://deteksiemosi.com/js/detection.js"></script>
+<!-- <script src="{{ asset('js/detection.js') }}"></script> -->
 <!-- <script defer src="https://unpkg.com/face-api.js"></script> -->
